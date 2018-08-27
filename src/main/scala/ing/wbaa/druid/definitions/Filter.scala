@@ -34,6 +34,7 @@ object FilterType extends EnumCodec[FilterType] {
   case object Regex            extends FilterType
   case object Not              extends FilterType
   case object Javascript       extends FilterType
+  case object Like             extends FilterType
   val values: Set[FilterType] = sealerate.values[FilterType]
 }
 
@@ -52,6 +53,7 @@ object Filter {
         case x: AndFilter        => x.asJsonObject
         case x: OrFilter         => x.asJsonObject
         case x: JavascriptFilter => x.asJsonObject
+        case x: LikeFilter       => x.asJsonObject
       }).add("type", filter.`type`.asJson).asJson
   }
 }
@@ -97,6 +99,11 @@ object SelectFilter {
 case class RegexFilter(dimension: String, pattern: String) extends Filter {
   val `type` = FilterType.Regex
 }
+
+case class LikeFilter(dimension: String, pattern: String) extends Filter {
+  val `type` = FilterType.Like
+}
+
 case class InFilter(dimension: String, values: Seq[String]) extends Filter {
   val `type` = FilterType.In
 }

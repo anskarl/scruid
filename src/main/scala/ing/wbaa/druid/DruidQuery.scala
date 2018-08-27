@@ -62,8 +62,15 @@ case class GroupByQuery(
     dimensions: List[Dimension] = List(),
     granularity: Granularity = GranularityType.All,
     dataSource: String = DruidConfig.datasource,
-    having: Option[Having] = None
+    having: Option[Having] = None,
+    limit: Option[Int] = None,
+    threshold: Option[Int] = None,
+    excludeNulls: Option[Boolean] = None,
 ) extends DruidQuery {
+
+  require(limit.forall(_ > 0), s"Invalid limit specified ${limit.get} (should be > 0)")
+  require(threshold.forall(_ > 0), s"Invalid threshold specified ${threshold.get} (should be > 0)")
+
   val queryType = QueryType.GroupBy
 }
 
