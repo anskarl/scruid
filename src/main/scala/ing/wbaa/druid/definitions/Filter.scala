@@ -35,6 +35,8 @@ object FilterType extends EnumCodec[FilterType] {
   case object Not              extends FilterType
   case object Javascript       extends FilterType
   case object Like             extends FilterType
+  case object Bound            extends FilterType
+  case object Comparison       extends FilterType
   val values: Set[FilterType] = sealerate.values[FilterType]
 }
 
@@ -54,6 +56,8 @@ object Filter {
         case x: OrFilter         => x.asJsonObject
         case x: JavascriptFilter => x.asJsonObject
         case x: LikeFilter       => x.asJsonObject
+        case x: BoundFilter      => x.asJsonObject
+        case x: ComparisonFilter => x.asJsonObject
       }).add("type", filter.`type`.asJson).asJson
   }
 }
@@ -112,4 +116,20 @@ case class OrFilter(fields: List[Filter])  extends Filter { val `type` = FilterT
 case class NotFilter(field: Filter)        extends Filter { val `type` = FilterType.Not }
 case class JavascriptFilter(dimension: String, function: String) extends Filter {
   val `type` = FilterType.Javascript
+}
+
+case class BoundFilter(
+    dimension: String,
+    lower: Option[String] = None,
+    upper: Option[String] = None,
+    lowerStrict: Option[Boolean] = None,
+    upperStrict: Option[Boolean] = None,
+    ordering: Option[DimensionOrder] = None,
+    extractionFn: Option[ExtractionFn] = None
+) extends Filter {
+  val `type` = FilterType.Bound
+}
+
+case class ComparisonFilter(dimensions: List[String]) extends Filter {
+  val `type` = FilterType.Comparison
 }

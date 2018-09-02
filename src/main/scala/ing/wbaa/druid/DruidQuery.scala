@@ -63,15 +63,36 @@ case class GroupByQuery(
     granularity: Granularity = GranularityType.All,
     dataSource: String = DruidConfig.datasource,
     having: Option[Having] = None,
-    limit: Option[Int] = None,
-    threshold: Option[Int] = None,
-    excludeNulls: Option[Boolean] = None,
+    limitSpec: Option[LimitSpec] = None
 ) extends DruidQuery {
 
-  require(limit.forall(_ > 0), s"Invalid limit specified ${limit.get} (should be > 0)")
-  require(threshold.forall(_ > 0), s"Invalid threshold specified ${threshold.get} (should be > 0)")
-
   val queryType = QueryType.GroupBy
+}
+
+case class LimitSpec(limit: Int, columns: Seq[OrderByColumnSpec]) {
+  val `type` = "default"
+}
+
+case class OrderByColumnSpec(
+    dimension: String,
+    direction: Direction = Direction.ascending,
+    dimensionOrder: DimensionOrder = DimensionOrder.lexicographic
+)
+
+sealed trait Direction extends Enum with LowerCaseEnumStringEncoder
+object Direction extends EnumCodec[Direction] {
+  case object ascending  extends Direction
+  case object descending extends Direction
+  val values: Set[Direction] = sealerate.values[Direction]
+}
+
+sealed trait DimensionOrder extends Enum with LowerCaseEnumStringEncoder
+object DimensionOrder extends EnumCodec[DimensionOrder] {
+  case object lexicographic extends DimensionOrder
+  case object alphanumeric  extends DimensionOrder
+  case object strlen        extends DimensionOrder
+  case object numeric       extends DimensionOrder
+  val values: Set[DimensionOrder] = sealerate.values[DimensionOrder]
 }
 
 case class TimeSeriesQuery(
