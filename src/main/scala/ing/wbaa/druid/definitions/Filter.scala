@@ -36,7 +36,8 @@ object FilterType extends EnumCodec[FilterType] {
   case object Javascript       extends FilterType
   case object Like             extends FilterType
   case object Bound            extends FilterType
-  case object Comparison       extends FilterType
+  case object Search           extends FilterType
+  case object Interval         extends FilterType
   val values: Set[FilterType] = sealerate.values[FilterType]
 }
 
@@ -57,7 +58,7 @@ object Filter {
         case x: JavascriptFilter => x.asJsonObject
         case x: LikeFilter       => x.asJsonObject
         case x: BoundFilter      => x.asJsonObject
-        case x: ComparisonFilter => x.asJsonObject
+        case x: SearchFilter     => x.asJsonObject
       }).add("type", filter.`type`.asJson).asJson
   }
 }
@@ -130,6 +131,52 @@ case class BoundFilter(
   val `type` = FilterType.Bound
 }
 
-case class ComparisonFilter(dimensions: List[String]) extends Filter {
-  val `type` = FilterType.Comparison
+case class ColumnComparisonFilter(dimensions: List[String]) extends Filter {
+  val `type` = FilterType.ColumnComparison
+}
+
+case class IntervalFilter(dimension: String,
+                          intervals: List[String],
+                          extractionFn: Option[ExtractionFn] = None)
+    extends Filter {
+  val `type` = FilterType.Interval
+}
+
+case class SearchFilter(dimension: String,
+                        query: SearchQuerySpec,
+                        extractionFn: Option[ExtractionFn] = None)
+    extends Filter {
+
+  val `type` = FilterType.Search
+}
+
+sealed trait SearchQuerySpecType extends Enum with CamelCaseEnumStringEncoder
+
+object SearchQuerySpecType extends EnumCodec[SearchQuerySpecType] {
+  case object Contains            extends SearchQuerySpecType
+  case object InsensitiveContains extends SearchQuerySpecType
+  val values: Set[SearchQuerySpecType] = sealerate.values[SearchQuerySpecType]
+}
+
+sealed trait SearchQuerySpec {
+  val `type`: SearchQuerySpecType
+}
+
+object SearchQuerySpec {
+  implicit val encoder: Encoder[SearchQuerySpec] = new Encoder[SearchQuerySpec] {
+    final def apply(contains: SearchQuerySpec): Json =
+      (contains match {
+        case x: ContainsCaseSensitive => x.asJsonObject
+        case x: ContainsInsensitive   => x.asJsonObject
+      }).add("type", contains.`type`.asJson).asJson
+  }
+}
+
+case class ContainsCaseSensitive(value: String, caseSensitive: Option[Boolean] = None)
+    extends SearchQuerySpec {
+  val `type` = SearchQuerySpecType.Contains
+}
+
+case class ContainsInsensitive(value: String) extends SearchQuerySpec {
+  val `type` = SearchQuerySpecType.InsensitiveContains
 }

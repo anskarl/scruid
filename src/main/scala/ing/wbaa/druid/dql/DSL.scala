@@ -48,7 +48,8 @@ object DSL {
     private def eqNum(value: Double): Expression = new EqDouble(s.name, value)
 
     @inline
-    private def compareWith(other: Symbol): Expression = new Comparison(s.name :: other.name :: Nil)
+    private def compareWith(other: Symbol): Expression =
+      new ColumnComparison(s.name :: other.name :: Nil)
 
     def ===(other: Symbol): Expression = compareWith(other)
 
@@ -94,6 +95,16 @@ object DSL {
             upper = Option(upper.toString),
             ordering = Option(DimensionOrder.numeric))
 
+    def interval(values: String*): Expression = new Interval(s.name, values.toList)
+
+    def contains(value: String, caseSensitive: Boolean = true): Expression =
+      new Contains(s.name, value, caseSensitive)
+
+    def containsIgnoreCase(value: String): Expression =
+      new Contains(s.name, value, caseSensitive = false)
+
+    def containsInsensitive(value: String): Expression = new InsensitiveContains(s.name, value)
+
   }
 
   implicit class StringOps(val value: String) extends AnyVal {
@@ -113,7 +124,7 @@ object DSL {
   implicit def symbolToOrderByColumnSpec(s: Symbol): OrderByColumnSpec =
     OrderByColumnSpec(dimension = s.name)
 
-  implicit class OrderByColumnSpecWrapper(val s: Symbol) extends AnyVal {
+  implicit class OrderByColumnSpecValueClass(val s: Symbol) extends AnyVal {
 
     def asc: OrderByColumnSpec =
       OrderByColumnSpec(dimension = s.name, direction = Direction.ascending)
@@ -136,4 +147,43 @@ object DSL {
       )
   }
 
+  implicit def symbolToDim(s: Symbol): Dim = Dim(s.name)
+
+  def count(name: String): Aggregation = CountAggregation(name)
+
+  def longSum(name: String, fieldName: String): Aggregation = LongSumAggregation(name, fieldName)
+  def longMax(name: String, fieldName: String): Aggregation = LongMaxAggregation(name, fieldName)
+  def longMin(name: String, fieldName: String): Aggregation = LongMinAggregation(name, fieldName)
+  def longFirst(name: String, fieldName: String): Aggregation =
+    LongFirstAggregation(name, fieldName)
+  def longLast(name: String, fieldName: String): Aggregation = LongLastAggregation(name, fieldName)
+
+  def doubleSum(name: String, fieldName: String): Aggregation =
+    DoubleSumAggregation(name, fieldName)
+  def doubleMax(name: String, fieldName: String): Aggregation =
+    DoubleMaxAggregation(name, fieldName)
+  def doubleMin(name: String, fieldName: String): Aggregation =
+    DoubleMinAggregation(name, fieldName)
+  def doubleFirst(name: String, fieldName: String): Aggregation =
+    DoubleFirstAggregation(name, fieldName)
+  def doubleLast(name: String, fieldName: String): Aggregation =
+    DoubleLastAggregation(name, fieldName)
+
+  def thetaSketch(name: String,
+                  fieldName: String,
+                  isInputThetaSketch: Boolean = false,
+                  size: Long = 16384): Aggregation =
+    ThetaSketchAggregation(name, fieldName, isInputThetaSketch, size)
+
+  def hyperUnique(name: String,
+                  fieldName: String,
+                  isInputHyperUnique: Boolean = false,
+                  round: Boolean = false): Aggregation =
+    HyperUniqueAggregation(name, fieldName, isInputHyperUnique, round)
+
+  def in(name: String, filter: InFilter, aggregator: Aggregation): Aggregation =
+    InFilteredAggregation(name, filter, aggregator)
+
+  def selector(name: String, filter: SelectFilter, aggregator: Aggregation): Aggregation =
+    SelectorFilteredAggregation(name, filter, aggregator)
 }

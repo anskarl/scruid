@@ -7,5 +7,5 @@ target/
 
 .ensime*
 
-application.conf
+src/main/resources/application.conf
 IgnoreMe*

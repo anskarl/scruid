@@ -1,6 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ing.wbaa.druid.dql
 
-import ing.wbaa.druid._
+import ing.wbaa.druid.{ Direction, _ }
 import ing.wbaa.druid.definitions._
 
 private[dql] sealed trait QueryBuilderCommons {
@@ -74,27 +91,21 @@ final class QueryBuilder private[dql] () extends QueryBuilderCommons {
       dataSource = this.dataSourceOpt.getOrElse(DruidConfig.datasource)
     )
 
-  def topN(dimension: Symbol, threshold: Int): TopNQueryBuilder =
-    copyTo(new TopNQueryBuilder(dimension.name, threshold))
+  def topN(dimension: Dim, metric: String, threshold: Int): TopNQueryBuilder =
+    copyTo(new TopNQueryBuilder(dimension, metric, threshold))
 
-  def groupBy(dimensions: Symbol*): GroupByQueryBuilder =
-    copyTo(new GroupByQueryBuilder(dimensions.map(_.name)))
+  def groupBy(dimensions: Dim*): GroupByQueryBuilder =
+    copyTo(new GroupByQueryBuilder(dimensions))
 
 }
 
-final class TopNQueryBuilder private[dql] (dimensionName: String, n: Int)
+final class TopNQueryBuilder private[dql] (dimension: Dim, metric: String, n: Int)
     extends QueryBuilderCommons {
   protected var isDescending                            = true
-  protected var metricOpt                               = Option.empty[String]
   protected var postAggregations: List[PostAggregation] = Nil
 
   def setDescending(v: Boolean): this.type = {
     isDescending = v
-    this
-  }
-
-  def setMetric(metric: String): this.type = {
-    metricOpt = Option(metric)
     this
   }
 
@@ -106,9 +117,9 @@ final class TopNQueryBuilder private[dql] (dimensionName: String, n: Int)
 
   def build(): TopNQuery =
     TopNQuery(
-      dimension = Dimension(dimensionName),
+      dimension = this.dimension.build(),
       threshold = n,
-      metric = metricOpt.get, // todo
+      metric = metric,
       aggregations = this.aggregations,
       intervals = this.intervals,
       granularity = this.granularityOpt.getOrElse(GranularityType.All),
@@ -119,21 +130,30 @@ final class TopNQueryBuilder private[dql] (dimensionName: String, n: Int)
 
 }
 
-final class GroupByQueryBuilder private[dql] (dimensions: Seq[String]) extends QueryBuilderCommons {
+final class GroupByQueryBuilder private[dql] (dimensions: Seq[Dim]) extends QueryBuilderCommons {
 
-  protected var havingOpt    = Option.empty[Having]
-  protected var limitSpecOpt = Option.empty[LimitSpec]
-  protected var limitOpt     = Option.empty[Int]
+  protected var limitOpt                        = Option.empty[Int]
+  protected var limitCols                       = Seq.empty[OrderByColumnSpec]
+  protected var havingExpressions: List[Having] = Nil
 
   protected var excludeNullsOpt = Option.empty[Boolean]
 
   def having(v: Expression): this.type = {
-    havingOpt = Option(v.asHaving)
+    havingExpressions = v.asHaving :: havingExpressions
     this
   }
 
-  def withLimit(n: Int, cols: OrderByColumnSpec*): this.type = {
-    limitSpecOpt = Option(LimitSpec(limit = n, columns = cols))
+  def limit(n: Int,
+            direction: Direction,
+            dimensionOrder: DimensionOrder = DimensionOrder.lexicographic): this.type = {
+    limitOpt = Option(n)
+    limitCols = dimensions.map(dim => OrderByColumnSpec(dim.name, direction, dimensionOrder))
+    this
+  }
+
+  def limit(n: Int, cols: OrderByColumnSpec*): this.type = {
+    limitOpt = Option(n)
+    limitCols = cols
     this
   }
 
@@ -142,16 +162,39 @@ final class GroupByQueryBuilder private[dql] (dimensions: Seq[String]) extends Q
     this
   }
 
-  def build(): GroupByQuery =
+  def build(): GroupByQuery = {
+
+    val havingOpt =
+      if (havingExpressions.isEmpty) None
+      else if (havingExpressions.size == 1) Option(havingExpressions.head)
+      else Option(definitions.AndHaving(havingExpressions))
+
+    val limitSpecOpt =
+      limitOpt.map { n =>
+        if (limitCols.nonEmpty) LimitSpec(limit = n, columns = limitCols)
+        else LimitSpec(limit = n, columns = dimensions.map(dim => OrderByColumnSpec(dim.name)))
+      }
+
+    if (excludeNullsOpt.contains(true)) {
+      val excludeNullsExpressions = dimensions
+        .map(dim => new Not(new NullDim(dim.name)))
+        .toList
+
+      where(new And(excludeNullsExpressions))
+    }
+
+    val resultingFilters = this.getFilters
+
     GroupByQuery(
       aggregations = this.aggregations,
       intervals = this.intervals,
-      filter = this.getFilters,
-      dimensions = this.dimensions.map(d => Dimension(d)).toList,
+      filter = resultingFilters,
+      dimensions = this.dimensions.map(_.build()).toList,
       granularity = this.granularityOpt.getOrElse(GranularityType.All),
       dataSource = this.dataSourceOpt.getOrElse(DruidConfig.datasource),
       having = havingOpt,
-      limitSpec = this.limitSpecOpt
+      limitSpec = limitSpecOpt
     )
+  }
 
 }

@@ -1,6 +1,24 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ing.wbaa.druid.dql
 
-import ing.wbaa.druid.DimensionOrder
+import ing.wbaa.druid.{ definitions, DimensionOrder }
+import ing.wbaa.druid.definitions.SearchQuerySpecType.InsensitiveContains
 import ing.wbaa.druid.definitions._
 
 sealed trait Expression {
@@ -129,8 +147,8 @@ class LtEq(name: String, value: Double) extends Expression {
 
 }
 
-class Comparison(dimensions: List[String]) extends Expression with FilterOnlyOperator {
-  override protected[dql] def createFilter: Filter = ComparisonFilter(dimensions)
+class ColumnComparison(dimensions: List[String]) extends Expression with FilterOnlyOperator {
+  override protected[dql] def createFilter: Filter = ColumnComparisonFilter(dimensions)
 }
 
 case class Bound(dimension: String,
@@ -159,4 +177,22 @@ case class Bound(dimension: String,
   override protected[dql] def createFilter: Filter =
     BoundFilter(dimension, lower, upper, lowerStrict, upperStrict, ordering, extractionFn)
 
+}
+
+class Interval(dimension: String, values: List[String]) extends Expression with FilterOnlyOperator {
+  override protected[dql] def createFilter: Filter = IntervalFilter(dimension, values)
+}
+
+class Contains(dimension: String, value: String, caseSensitive: Boolean)
+    extends Expression
+    with FilterOnlyOperator {
+
+  override protected[dql] def createFilter: Filter =
+    SearchFilter(dimension, query = ContainsCaseSensitive(value, Option(caseSensitive)))
+}
+class InsensitiveContains(dimension: String, value: String)
+    extends Expression
+    with FilterOnlyOperator {
+  override protected[dql] def createFilter: Filter =
+    SearchFilter(dimension, query = definitions.ContainsInsensitive(value))
 }
