@@ -17,7 +17,7 @@
 
 package ing.wbaa.druid.dql
 
-import ing.wbaa.druid.{ GroupByQuery, TimeSeriesQuery }
+import ing.wbaa.druid.{ GroupByQuery, TimeSeriesQuery, TopNQuery }
 import ing.wbaa.druid.definitions._
 import org.scalatest.{ Matchers, WordSpec }
 import org.scalatest.concurrent._
@@ -42,7 +42,7 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
 
       val query: TimeSeriesQuery = DQL.Builder
         .withGranularity(GranularityType.Hour)
-        .addIntervals("2011-06-01/2017-06-01")
+        .interval("2011-06-01/2017-06-01")
         .agg(count(name = "count"))
         .build()
 
@@ -56,7 +56,7 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
     "extract the data and return a map with the timestamps as keys" in {
       val query: TimeSeriesQuery = DQL.Builder
         .withGranularity(GranularityType.Hour)
-        .addIntervals("2011-06-01/2017-06-01")
+        .interval("2011-06-01/2017-06-01")
         .agg(count(name = "count"))
         .build()
 
@@ -71,10 +71,10 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
     }
   }
 
-  "GroupByQuery" should {
+  "DQL GroupByQuery" should {
     "successfully be interpreted by Druid" in {
       val query = DQL.Builder
-        .addIntervals("2011-06-01/2017-06-01")
+        .interval("2011-06-01/2017-06-01")
         .agg(count("count"))
         .groupBy('isAnonymous)
         .build()
@@ -88,7 +88,7 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
 
     "successfully be interpreted by Druid when using lower granularity" in {
       val query = DQL.Builder
-        .addIntervals("2011-06-01/2017-06-01")
+        .interval("2011-06-01/2017-06-01")
         .agg(count("count"))
         .groupBy('isAnonymous)
         .withGranularity(GranularityType.Hour)
@@ -101,5 +101,157 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
       }
     }
   }
+
+  "DQL TopNQuery" should {
+    "successfully be interpreted by Druid" in {
+      val topNLimit = 5
+
+      val query = DQL.Builder
+        .agg(count("count"))
+        .interval("2011-06-01/2017-06-01")
+        .topN(dimension = 'countryName, metric = "count", threshold = topNLimit)
+        .build()
+
+      val request = query.execute()
+
+      whenReady(request) { response =>
+        val topN = response.list[TopCountry]
+
+        topN.size shouldBe topNLimit
+
+        topN.head shouldBe TopCountry(count = 35445, countryName = None)
+        topN(1) shouldBe TopCountry(count = 528, countryName = Some("United States"))
+        topN(2) shouldBe TopCountry(count = 256, countryName = Some("Italy"))
+        topN(3) shouldBe TopCountry(count = 234, countryName = Some("United Kingdom"))
+        topN(4) shouldBe TopCountry(count = 205, countryName = Some("France"))
+      }
+    }
+
+    "also work with a filter" in {
+
+      val query = DQL.Builder
+        .agg(count("count"))
+        .interval("2011-06-01/2017-06-01")
+        .topN(dimension = 'countryName, metric = "count", threshold = 5)
+        .where('countryName === "United States" or 'countryName === "Italy")
+        .build()
+
+      val request = query.execute()
+
+      whenReady(request) { response =>
+        val topN = response.list[TopCountry]
+        topN.size shouldBe 2
+        topN.head shouldBe TopCountry(count = 528, countryName = Some("United States"))
+        topN(1) shouldBe TopCountry(count = 256, countryName = Some("Italy"))
+      }
+    }
+  }
+
+  "DQL also work with 'in' filtered aggregations" should {
+    "successfully be interpreted by Druid" in {
+
+      val query = DQL.Builder
+        .agg(
+          longSum(name = "count", fieldName = "count"),
+          inFiltered(
+            name = "InFilteredAgg",
+            aggregator = longSum(name = "filteredCount", fieldName = "count"),
+            dimension = "channel",
+            values = Seq("#en.wikipedia", "#de.wikipedia"): _*
+          )
+        )
+        .interval("2011-06-01/2017-06-01")
+        .topN(dimension = 'isAnonymous, metric = "count", threshold = 5)
+        .build()
+
+      /* //todo remove the commented code
+      import io.circe.generic.auto._
+      import io.circe.generic.encoding._
+      import io.circe.syntax._
+
+      println(query.asJson)*/
+
+      val request = query.execute()
+
+      whenReady(request) { response =>
+        val topN = response.list[AggregatedFilteredAnonymous]
+        topN.size shouldBe 2
+        topN.head shouldBe AggregatedFilteredAnonymous(count = 35445,
+                                                       filteredCount = 12374,
+                                                       isAnonymous = "false")
+        topN(1) shouldBe AggregatedFilteredAnonymous(count = 3799,
+                                                     filteredCount = 1698,
+                                                     isAnonymous = "true")
+      }
+    }
+  }
+
+  "DQL also work with 'selector' filtered aggregations" should {
+    "successfully be interpreted by Druid" in {
+
+      val query = DQL.Builder
+        .topN('isAnonymous, metric = "count", threshold = 5)
+        .agg(longSum(name = "count", fieldName = "count"))
+        .agg(
+          selectorFiltered(name = "SelectorFilteredAgg",
+                           aggregator = longSum(name = "filteredCount", fieldName = "count"),
+                           dimension = "channel",
+                           value = "#en.wikipedia")
+        )
+        .interval("2011-06-01/2017-06-01")
+        .build()
+
+      val request = query.execute()
+
+      whenReady(request) { response =>
+        val topN = response.list[AggregatedFilteredAnonymous]
+        topN.size shouldBe 2
+        topN.head shouldBe AggregatedFilteredAnonymous(count = 35445,
+                                                       filteredCount = 9993,
+                                                       isAnonymous = "false")
+        topN(1) shouldBe AggregatedFilteredAnonymous(count = 3799,
+                                                     filteredCount = 1556,
+                                                     isAnonymous = "true")
+      }
+    }
+  }
+
+  // todo:
+
+  /*"also work with post 'arithmetic' postaggregations" should {
+    "successfully be interpreted by Druid" in {
+      val request = TopNQuery(
+        dimension = Dimension(
+          dimension = "isAnonymous"
+        ),
+        threshold = 5,
+        metric = "count",
+        aggregations = List(
+          LongSumAggregation(name = "count", fieldName = "count")
+        ),
+        postAggregations = List(
+          ArithmeticPostAggregation(name = "halfCount",
+            fn = "/",
+            fields = (
+              FieldAccessPostAggregator(name = "count",
+                fieldName = "count"),
+              ConstantPostAggregator(name = "two", value = 2)
+            ))
+        ),
+        intervals = List("2011-06-01/2017-06-01")
+      ).execute
+
+      whenReady(request) { response =>
+        val topN = response.list[PostAggregationAnonymous]
+        topN.size shouldBe 2
+        topN.head shouldBe PostAggregationAnonymous(count = 35445,
+          halfCount = 17722.5,
+          isAnonymous = "false")
+        topN(1) shouldBe PostAggregationAnonymous(count = 3799,
+          halfCount = 1899.5,
+          isAnonymous = "true")
+      }
+    }
+  }*/
 
 }

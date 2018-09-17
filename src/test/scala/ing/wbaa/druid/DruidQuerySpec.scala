@@ -158,7 +158,7 @@ class DruidQuerySpec extends WordSpec with Matchers with ScalaFutures {
   "also work with 'in' filtered aggregations" should {
     "successfully be interpreted by Druid" in {
 
-      val request = TopNQuery(
+      val q = TopNQuery(
         dimension = Dimension(
           dimension = "isAnonymous"
         ),
@@ -173,7 +173,14 @@ class DruidQuerySpec extends WordSpec with Matchers with ScalaFutures {
           )
         ),
         intervals = List("2011-06-01/2017-06-01")
-      ).execute
+      )
+      import io.circe.generic.auto._
+      import io.circe.generic.encoding._
+      import io.circe.syntax._
+
+      println(q.asJson)
+
+      val request = q.execute()
 
       whenReady(request) { response =>
         val topN = response.list[AggregatedFilteredAnonymous]

@@ -17,7 +17,7 @@
 
 package ing.wbaa.druid.dql
 
-import ing.wbaa.druid.definitions.{ DefaultDimension, Dimension, ExtractionDimension, ExtractionFn }
+import ing.wbaa.druid.definitions._
 
 case class Dim(name: String,
                outputNameOpt: Option[String] = None,

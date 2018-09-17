@@ -17,6 +17,7 @@
 
 package ing.wbaa.druid.dql
 
+import ing.wbaa.druid.definitions.AggregationType.ThetaSketch
 import ing.wbaa.druid.{ DimensionOrder, Direction, OrderByColumnSpec }
 import ing.wbaa.druid.definitions._
 
@@ -149,41 +150,72 @@ object DSL {
 
   implicit def symbolToDim(s: Symbol): Dim = Dim(s.name)
 
-  def count(name: String): Aggregation = CountAggregation(name)
+  def count: CountAgg               = new CountAgg()
+  def count(name: String): CountAgg = new CountAgg(Option(name))
 
-  def longSum(name: String, fieldName: String): Aggregation = LongSumAggregation(name, fieldName)
-  def longMax(name: String, fieldName: String): Aggregation = LongMaxAggregation(name, fieldName)
-  def longMin(name: String, fieldName: String): Aggregation = LongMinAggregation(name, fieldName)
-  def longFirst(name: String, fieldName: String): Aggregation =
-    LongFirstAggregation(name, fieldName)
-  def longLast(name: String, fieldName: String): Aggregation = LongLastAggregation(name, fieldName)
+  def longSum(fieldName: String): LongSumAgg               = new LongSumAgg(fieldName)
+  def longSum(name: String, fieldName: String): LongSumAgg = new LongSumAgg(fieldName, Option(name))
 
-  def doubleSum(name: String, fieldName: String): Aggregation =
-    DoubleSumAggregation(name, fieldName)
-  def doubleMax(name: String, fieldName: String): Aggregation =
-    DoubleMaxAggregation(name, fieldName)
-  def doubleMin(name: String, fieldName: String): Aggregation =
-    DoubleMinAggregation(name, fieldName)
-  def doubleFirst(name: String, fieldName: String): Aggregation =
-    DoubleFirstAggregation(name, fieldName)
-  def doubleLast(name: String, fieldName: String): Aggregation =
-    DoubleLastAggregation(name, fieldName)
+  def longMax(fieldName: String): LongMaxAgg               = new LongMaxAgg(fieldName)
+  def longMax(name: String, fieldName: String): LongMaxAgg = new LongMaxAgg(fieldName, Option(name))
 
-  def thetaSketch(name: String,
-                  fieldName: String,
-                  isInputThetaSketch: Boolean = false,
-                  size: Long = 16384): Aggregation =
-    ThetaSketchAggregation(name, fieldName, isInputThetaSketch, size)
+  def longFirst(fieldName: String): LongFirstAgg = new LongFirstAgg(fieldName)
+  def longFirst(name: String, fieldName: String): LongFirstAgg =
+    new LongFirstAgg(fieldName, Option(name))
 
-  def hyperUnique(name: String,
-                  fieldName: String,
-                  isInputHyperUnique: Boolean = false,
-                  round: Boolean = false): Aggregation =
-    HyperUniqueAggregation(name, fieldName, isInputHyperUnique, round)
+  def longLast(fieldName: String): LongLastAgg = new LongLastAgg(fieldName)
+  def longLast(name: String, fieldName: String): LongLastAgg =
+    new LongLastAgg(fieldName, Option(name))
 
-  def in(name: String, filter: InFilter, aggregator: Aggregation): Aggregation =
-    InFilteredAggregation(name, filter, aggregator)
+  def doubleSum(fieldName: String): DoubleSumAgg = new DoubleSumAgg(fieldName)
+  def doubleSum(name: String, fieldName: String): DoubleSumAgg =
+    new DoubleSumAgg(fieldName, Option(name))
 
-  def selector(name: String, filter: SelectFilter, aggregator: Aggregation): Aggregation =
-    SelectorFilteredAggregation(name, filter, aggregator)
+  def doubleMax(fieldName: String): DoubleMaxAgg = new DoubleMaxAgg(fieldName)
+  def doubleMax(name: String, fieldName: String): DoubleMaxAgg =
+    new DoubleMaxAgg(fieldName, Option(name))
+
+  def doubleFirst(fieldName: String): DoubleFirstAgg = new DoubleFirstAgg(fieldName)
+  def doubleFirst(name: String, fieldName: String): DoubleFirstAgg =
+    new DoubleFirstAgg(fieldName, Option(name))
+
+  def doubleLast(fieldName: String): DoubleLastAgg = new DoubleLastAgg(fieldName)
+  def doubleLast(name: String, fieldName: String): DoubleLastAgg =
+    new DoubleLastAgg(fieldName, Option(name))
+
+  def thetaSketch(fieldName: String): ThetaSketchAgg = ThetaSketchAgg(fieldName)
+  def thetaSketch(name: String, fieldName: String): ThetaSketchAgg =
+    ThetaSketchAgg(fieldName, Option(name))
+
+  def hyperUnique(fieldName: String): HyperUniqueAgg = HyperUniqueAgg(fieldName)
+  def hyperUnique(name: String, fieldName: String): HyperUniqueAgg =
+    HyperUniqueAgg(fieldName, Option(name))
+
+  def inFiltered(aggregator: AggregationExpression,
+                 dimension: String,
+                 values: String*): InFilteredAgg =
+    InFilteredAgg(dimension, values, aggregator.build())
+
+  def inFiltered(name: String,
+                 aggregator: AggregationExpression,
+                 dimension: String,
+                 values: String*): InFilteredAgg =
+    InFilteredAgg(dimension, values, aggregator.build(), Option(name))
+
+  def selectorFiltered(aggregator: AggregationExpression,
+                       dimension: String,
+                       value: String): SelectorFilteredAgg =
+    SelectorFilteredAgg(dimension, Option(value), aggregator.build())
+
+  def selectorFiltered(name: String,
+                       aggregator: AggregationExpression,
+                       dimension: String): SelectorFilteredAgg =
+    SelectorFilteredAgg(dimension, None, aggregator.build(), Option(name))
+
+  def selectorFiltered(name: String,
+                       aggregator: AggregationExpression,
+                       dimension: String,
+                       value: String): SelectorFilteredAgg =
+    SelectorFilteredAgg(dimension, Option(value), aggregator.build(), Option(name))
+
 }

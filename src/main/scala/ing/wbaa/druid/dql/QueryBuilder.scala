@@ -39,13 +39,18 @@ private[dql] sealed trait QueryBuilderCommons {
     this
   }
 
-  def agg(aggs: Aggregation*): this.type = {
+  def agg(aggs: AggregationExpression*): this.type = {
     aggregations =
-      aggs.foldLeft(aggregations)((aggregations, currentAgg) => currentAgg :: aggregations)
+      aggs.foldLeft(aggregations)((aggregations, currentAgg) => currentAgg.build() :: aggregations)
     this
   }
 
-  def addIntervals(ints: String*): this.type = {
+  def interval(interval: String): this.type = {
+    intervals = interval :: intervals
+    this
+  }
+
+  def intervals(ints: String*): this.type = {
     intervals = ints.foldLeft(intervals)((intervals, currentInt) => currentInt :: intervals)
     this
   }
