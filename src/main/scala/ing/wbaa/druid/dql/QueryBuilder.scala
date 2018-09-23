@@ -55,7 +55,7 @@ private[dql] sealed trait QueryBuilderCommons {
     this
   }
 
-  def where(filter: Expression): this.type = {
+  def where(filter: FilteringExpression): this.type = {
 
     filters = filter.asFilter :: filters
     this
@@ -143,7 +143,7 @@ final class GroupByQueryBuilder private[dql] (dimensions: Seq[Dim]) extends Quer
 
   protected var excludeNullsOpt = Option.empty[Boolean]
 
-  def having(v: Expression): this.type = {
+  def having(v: FilteringExpression): this.type = {
     havingExpressions = v.asHaving :: havingExpressions
     this
   }

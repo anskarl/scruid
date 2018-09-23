@@ -40,10 +40,10 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
   "DQL TimeSeriesQuery" should {
     "successfully be interpreted by Druid" in {
 
-      val query: TimeSeriesQuery = DQL.Builder
+      val query: TimeSeriesQuery = DQL
         .withGranularity(GranularityType.Hour)
         .interval("2011-06-01/2017-06-01")
-        .agg(count(name = "count"))
+        .agg(count as "count")
         .build()
 
       val request = query.execute()
@@ -54,10 +54,10 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
     }
 
     "extract the data and return a map with the timestamps as keys" in {
-      val query: TimeSeriesQuery = DQL.Builder
+      val query: TimeSeriesQuery = DQL
         .withGranularity(GranularityType.Hour)
         .interval("2011-06-01/2017-06-01")
-        .agg(count(name = "count"))
+        .agg(count as "count")
         .build()
 
       val request = query.execute()
@@ -73,9 +73,9 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
 
   "DQL GroupByQuery" should {
     "successfully be interpreted by Druid" in {
-      val query = DQL.Builder
+      val query: GroupByQuery = DQL
         .interval("2011-06-01/2017-06-01")
-        .agg(count("count"))
+        .agg(count as "count")
         .groupBy('isAnonymous)
         .build()
 
@@ -87,9 +87,9 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
     }
 
     "successfully be interpreted by Druid when using lower granularity" in {
-      val query = DQL.Builder
+      val query = DQL
         .interval("2011-06-01/2017-06-01")
-        .agg(count("count"))
+        .agg(count as "count")
         .groupBy('isAnonymous)
         .withGranularity(GranularityType.Hour)
         .build()
@@ -106,8 +106,8 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
     "successfully be interpreted by Druid" in {
       val topNLimit = 5
 
-      val query = DQL.Builder
-        .agg(count("count"))
+      val query = DQL
+        .agg(count as "count")
         .interval("2011-06-01/2017-06-01")
         .topN(dimension = 'countryName, metric = "count", threshold = topNLimit)
         .build()
@@ -129,8 +129,8 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
 
     "also work with a filter" in {
 
-      val query = DQL.Builder
-        .agg(count("count"))
+      val query = DQL
+        .agg(count as "count")
         .interval("2011-06-01/2017-06-01")
         .topN(dimension = 'countryName, metric = "count", threshold = 5)
         .where('countryName === "United States" or 'countryName === "Italy")
@@ -150,26 +150,15 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
   "DQL also work with 'in' filtered aggregations" should {
     "successfully be interpreted by Druid" in {
 
-      val query = DQL.Builder
+      val query = DQL
+        .agg('count.longSum as "count")
         .agg(
-          longSum(name = "count", fieldName = "count"),
-          inFiltered(
-            name = "InFilteredAgg",
-            aggregator = longSum(name = "filteredCount", fieldName = "count"),
-            dimension = "channel",
-            values = Seq("#en.wikipedia", "#de.wikipedia"): _*
-          )
+          'channel.inFiltered('count.longSum as "filteredCount",
+                              values = Seq("#en.wikipedia", "#de.wikipedia"): _*)
         )
         .interval("2011-06-01/2017-06-01")
         .topN(dimension = 'isAnonymous, metric = "count", threshold = 5)
         .build()
-
-      /* //todo remove the commented code
-      import io.circe.generic.auto._
-      import io.circe.generic.encoding._
-      import io.circe.syntax._
-
-      println(query.asJson)*/
 
       val request = query.execute()
 
@@ -189,14 +178,12 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
   "DQL also work with 'selector' filtered aggregations" should {
     "successfully be interpreted by Druid" in {
 
-      val query = DQL.Builder
+      val query = DQL
         .topN('isAnonymous, metric = "count", threshold = 5)
-        .agg(longSum(name = "count", fieldName = "count"))
+        .agg('count.longSum as "count")
         .agg(
-          selectorFiltered(name = "SelectorFilteredAgg",
-                           aggregator = longSum(name = "filteredCount", fieldName = "count"),
-                           dimension = "channel",
-                           value = "#en.wikipedia")
+          'channel.selectorFiltered(aggregator = 'count.longSum as "filteredCount",
+                                    value = "#en.wikipedia") as "SelectorFilteredAgg"
         )
         .interval("2011-06-01/2017-06-01")
         .build()
@@ -215,43 +202,5 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
       }
     }
   }
-
-  // todo:
-
-  /*"also work with post 'arithmetic' postaggregations" should {
-    "successfully be interpreted by Druid" in {
-      val request = TopNQuery(
-        dimension = Dimension(
-          dimension = "isAnonymous"
-        ),
-        threshold = 5,
-        metric = "count",
-        aggregations = List(
-          LongSumAggregation(name = "count", fieldName = "count")
-        ),
-        postAggregations = List(
-          ArithmeticPostAggregation(name = "halfCount",
-            fn = "/",
-            fields = (
-              FieldAccessPostAggregator(name = "count",
-                fieldName = "count"),
-              ConstantPostAggregator(name = "two", value = 2)
-            ))
-        ),
-        intervals = List("2011-06-01/2017-06-01")
-      ).execute
-
-      whenReady(request) { response =>
-        val topN = response.list[PostAggregationAnonymous]
-        topN.size shouldBe 2
-        topN.head shouldBe PostAggregationAnonymous(count = 35445,
-          halfCount = 17722.5,
-          isAnonymous = "false")
-        topN(1) shouldBe PostAggregationAnonymous(count = 3799,
-          halfCount = 1899.5,
-          isAnonymous = "true")
-      }
-    }
-  }*/
 
 }
