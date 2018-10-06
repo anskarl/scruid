@@ -15,118 +15,139 @@
  * limitations under the License.
  */
 
-package ing.wbaa.druid.dql
+package ing.wbaa.druid.dql.expressions
 
 import ing.wbaa.druid.definitions._
 
-sealed trait AggregationExpression {
+sealed trait AggregationExpression extends Named[AggregationExpression] {
+
   protected[dql] def build(): Aggregation
 
-  def alias(name: String): AggregationExpression
-  def as(name: String): AggregationExpression = alias(name)
+  def isComplex: Boolean = false
 }
 
 final class CountAgg(name: Option[String] = None) extends AggregationExpression {
 
-  override protected[dql] def build(): Aggregation = CountAggregation(name.getOrElse("count"))
+  override protected[dql] def build(): Aggregation = CountAggregation(this.getName)
 
   override def alias(name: String): AggregationExpression = new CountAgg(Option(name))
+
+  override def getName: String = name.getOrElse("count")
 }
 
 final class LongSumAgg(fieldName: String, name: Option[String] = None)
     extends AggregationExpression {
 
-  override protected[dql] def build(): Aggregation =
-    LongSumAggregation(name.getOrElse(s"long_sum_$fieldName"), fieldName)
+  override protected[dql] def build(): Aggregation = LongSumAggregation(this.getName, fieldName)
 
   override def alias(name: String): AggregationExpression = new LongSumAgg(fieldName, Option(name))
+
+  override def getName: String = name.getOrElse(s"long_sum_$fieldName")
 }
 
 final class LongMaxAgg(fieldName: String, name: Option[String] = None)
     extends AggregationExpression {
 
   override protected[dql] def build(): Aggregation =
-    LongMaxAggregation(name.getOrElse(s"long_max_$fieldName"), fieldName)
+    LongMaxAggregation(this.getName, fieldName)
 
   override def alias(name: String): AggregationExpression = new LongMaxAgg(fieldName, Option(name))
+
+  override def getName: String = name.getOrElse(s"long_max_$fieldName")
 }
 
 final class LongMinAgg(fieldName: String, name: Option[String] = None)
     extends AggregationExpression {
 
   override protected[dql] def build(): Aggregation =
-    LongMinAggregation(name.getOrElse(s"long_min_$fieldName"), fieldName)
+    LongMinAggregation(this.getName, fieldName)
 
   override def alias(name: String): AggregationExpression = new LongMinAgg(fieldName, Option(name))
+
+  override def getName: String = name.getOrElse(s"long_min_$fieldName")
 }
 
 final class LongFirstAgg(fieldName: String, name: Option[String] = None)
     extends AggregationExpression {
 
   override protected[dql] def build(): Aggregation =
-    LongFirstAggregation(name.getOrElse(s"long_first_$fieldName"), fieldName)
+    LongFirstAggregation(this.getName, fieldName)
 
   override def alias(name: String): AggregationExpression =
     new LongFirstAgg(fieldName, Option(name))
+
+  override def getName: String = name.getOrElse(s"long_first_$fieldName")
 }
 
 final class LongLastAgg(fieldName: String, name: Option[String] = None)
     extends AggregationExpression {
 
   override protected[dql] def build(): Aggregation =
-    LongLastAggregation(name.getOrElse(s"long_last_$fieldName"), fieldName)
+    LongLastAggregation(this.getName, fieldName)
 
   override def alias(name: String): AggregationExpression = new LongLastAgg(fieldName, Option(name))
+
+  override def getName: String = name.getOrElse(s"long_last_$fieldName")
 }
 
 final class DoubleSumAgg(fieldName: String, name: Option[String] = None)
     extends AggregationExpression {
 
   override protected[dql] def build(): Aggregation =
-    DoubleSumAggregation(name.getOrElse(s"double_sum_$fieldName"), fieldName)
+    DoubleSumAggregation(this.getName, fieldName)
 
   override def alias(name: String): AggregationExpression =
     new DoubleSumAgg(fieldName, Option(name))
+
+  override def getName: String = name.getOrElse(s"double_sum_$fieldName")
 }
 
 final class DoubleMaxAgg(fieldName: String, name: Option[String] = None)
     extends AggregationExpression {
 
   override protected[dql] def build(): Aggregation =
-    DoubleMaxAggregation(name.getOrElse(s"double_max_$fieldName"), fieldName)
+    DoubleMaxAggregation(this.getName, fieldName)
 
   override def alias(name: String): AggregationExpression =
     new DoubleMaxAgg(fieldName, Option(name))
+
+  override def getName: String = name.getOrElse(s"double_max_$fieldName")
 }
 
 final class DoubleMinAgg(fieldName: String, name: Option[String] = None)
     extends AggregationExpression {
 
   override protected[dql] def build(): Aggregation =
-    DoubleMinAggregation(name.getOrElse(s"double_min_$fieldName"), fieldName)
+    DoubleMinAggregation(this.getName, fieldName)
 
   override def alias(name: String): AggregationExpression =
     new DoubleMinAgg(fieldName, Option(name))
+
+  override def getName: String = name.getOrElse(s"double_min_$fieldName")
 }
 
 final class DoubleFirstAgg(fieldName: String, name: Option[String] = None)
     extends AggregationExpression {
 
   override protected[dql] def build(): Aggregation =
-    DoubleFirstAggregation(name.getOrElse(s"double_first_$fieldName"), fieldName)
+    DoubleFirstAggregation(this.getName, fieldName)
 
   override def alias(name: String): AggregationExpression =
     new DoubleFirstAgg(fieldName, Option(name))
+
+  override def getName: String = name.getOrElse(s"double_first_$fieldName")
 }
 
 final class DoubleLastAgg(fieldName: String, name: Option[String] = None)
     extends AggregationExpression {
 
   override protected[dql] def build(): Aggregation =
-    DoubleLastAggregation(name.getOrElse(s"double_last_$fieldName"), fieldName)
+    DoubleLastAggregation(this.getName, fieldName)
 
   override def alias(name: String): AggregationExpression =
     new DoubleLastAgg(fieldName, Option(name))
+
+  override def getName: String = name.getOrElse(s"double_last_$fieldName")
 }
 
 final case class ThetaSketchAgg(fieldName: String,
@@ -137,7 +158,7 @@ final case class ThetaSketchAgg(fieldName: String,
 
   override protected[dql] def build(): Aggregation =
     ThetaSketchAggregation(
-      name.getOrElse(s"theta_sketch_$fieldName"),
+      this.getName,
       fieldName,
       isInputThetaSketch,
       size
@@ -145,9 +166,13 @@ final case class ThetaSketchAgg(fieldName: String,
 
   override def alias(name: String): ThetaSketchAgg = copy(name = Option(name))
 
+  override def isComplex: Boolean = true
+
   def isInputThetaSketch(v: Boolean): ThetaSketchAgg = copy(isInputThetaSketch = v)
 
   def withSize(size: Long): ThetaSketchAgg = copy(size = size)
+
+  override def getName: String = name.getOrElse(s"theta_sketch_$fieldName")
 }
 
 final case class HyperUniqueAgg(fieldName: String,
@@ -158,17 +183,20 @@ final case class HyperUniqueAgg(fieldName: String,
 
   override protected[dql] def build(): Aggregation =
     HyperUniqueAggregation(
-      name.getOrElse(s"hyper_unique_$fieldName"),
+      this.getName,
       fieldName,
       isInputHyperUnique,
       round
     )
   override def alias(name: String): HyperUniqueAgg = copy(name = Option(name))
 
+  override def isComplex: Boolean = true
+
   def isInputHyperUnique(v: Boolean): HyperUniqueAgg = copy(isInputHyperUnique = v)
 
   def setRound(v: Boolean): HyperUniqueAgg = copy(round = v)
 
+  override def getName: String = name.getOrElse(s"hyper_unique_$fieldName")
 }
 
 final case class InFilteredAgg(dimension: String,
@@ -179,12 +207,14 @@ final case class InFilteredAgg(dimension: String,
 
   override protected[dql] def build(): Aggregation =
     InFilteredAggregation(
-      name.getOrElse(s"in_filtered_$dimension"),
+      this.getName,
       InFilter(dimension, values),
       aggregator
     )
 
   override def alias(name: String): InFilteredAgg = copy(name = Option(name))
+
+  override def getName: String = name.getOrElse(s"in_filtered_$dimension")
 }
 
 final case class SelectorFilteredAgg(dimension: String,
@@ -195,10 +225,12 @@ final case class SelectorFilteredAgg(dimension: String,
 
   override protected[dql] def build(): Aggregation =
     SelectorFilteredAggregation(
-      name.getOrElse(s"selector_filtered_$dimension"),
+      this.getName,
       SelectFilter(dimension, value),
       aggregator
     )
 
   override def alias(name: String): SelectorFilteredAgg = copy(name = Option(name))
+
+  override def getName: String = name.getOrElse(s"selector_filtered_$dimension")
 }

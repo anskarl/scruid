@@ -17,16 +17,23 @@
 
 package ing.wbaa.druid.dql
 
-import ing.wbaa.druid.{ DimensionOrder, Direction, OrderByColumnSpec }
+import ing.wbaa.druid.{ DimensionOrder, DimensionOrderType, Direction, OrderByColumnSpec }
 import ing.wbaa.druid.definitions._
+import ing.wbaa.druid.dql.expressions._
 
 import scala.language.implicitConversions
 
 object DSL {
 
-  def DQL: QueryBuilder = new QueryBuilder
-
   final val TS = new TimestampDim()
+
+  def dim(name: String): Symbol = Symbol(name)
+
+  implicit class StringToColumn(val sc: StringContext) extends AnyVal {
+    def d(args: Any*): Symbol = Symbol(sc.s(args: _*))
+  }
+
+  def DQL: QueryBuilder = new QueryBuilder
 
   def not(op: FilteringExpression): FilteringExpression = op match {
     case neg: Not => neg.op
@@ -89,13 +96,13 @@ object DSL {
       Bound(dimension = s.name,
             lower = Option(lower),
             upper = Option(upper),
-            ordering = Option(DimensionOrder.lexicographic))
+            ordering = Option(DimensionOrderType.lexicographic))
 
     def between(lower: Double, upper: Double): Bound =
       Bound(dimension = s.name,
             lower = Option(lower.toString),
             upper = Option(upper.toString),
-            ordering = Option(DimensionOrder.numeric))
+            ordering = Option(DimensionOrderType.numeric))
 
     def interval(values: String*): FilteringExpression = new Interval(s.name, values.toList)
 
@@ -110,20 +117,6 @@ object DSL {
 
   }
 
-  implicit class StringOps(val value: String) extends AnyVal {
-    def ===(s: Symbol): FilteringExpression = s === value
-    def =!=(s: Symbol): FilteringExpression = s =!= value
-  }
-
-  implicit class NumOps(val value: Double) extends AnyVal {
-    def ===(s: Symbol): FilteringExpression = s === value
-    def =!=(s: Symbol): FilteringExpression = s =!= value
-    def >(s: Symbol): FilteringExpression   = s < value
-    def >=(s: Symbol): FilteringExpression  = s =< value
-    def <(s: Symbol): FilteringExpression   = s > value
-    def =<(s: Symbol): FilteringExpression  = s >= value
-  }
-
   implicit def symbolToOrderByColumnSpec(s: Symbol): OrderByColumnSpec =
     OrderByColumnSpec(dimension = s.name)
 
@@ -135,18 +128,18 @@ object DSL {
     def desc: OrderByColumnSpec =
       OrderByColumnSpec(dimension = s.name, direction = Direction.descending)
 
-    def asc(order: DimensionOrder): OrderByColumnSpec =
+    def asc(orderType: DimensionOrderType): OrderByColumnSpec =
       OrderByColumnSpec(
         dimension = s.name,
         direction = Direction.ascending,
-        dimensionOrder = order
+        dimensionOrder = DimensionOrder(orderType)
       )
 
-    def desc(order: DimensionOrder): OrderByColumnSpec =
+    def desc(orderType: DimensionOrderType): OrderByColumnSpec =
       OrderByColumnSpec(
         dimension = s.name,
         direction = Direction.descending,
-        dimensionOrder = order
+        dimensionOrder = DimensionOrder(orderType)
       )
   }
 
@@ -212,4 +205,64 @@ object DSL {
   }
 
   def count: CountAgg = new CountAgg()
+
+  implicit class SymbolPostAgg(val s: Symbol) extends AnyVal {
+
+    @inline
+    private def arithmeticAgg(value: Double, fn: String): ArithmeticPostAgg =
+      ArithmeticPostAgg(leftField = new FieldAccessPostAgg(s.name),
+                        rightField = new ConstantPostAgg(value),
+                        fn = fn)
+    @inline
+    private def arithmeticFieldAgg(right: Symbol, fn: String): ArithmeticPostAgg =
+      ArithmeticPostAgg(leftField = new FieldAccessPostAgg(s.name),
+                        rightField = new FieldAccessPostAgg(right.name),
+                        fn = fn)
+
+    def +(v: Double): ArithmeticPostAgg        = arithmeticAgg(v, "+")
+    def -(v: Double): ArithmeticPostAgg        = arithmeticAgg(v, "-")
+    def *(v: Double): ArithmeticPostAgg        = arithmeticAgg(v, "*")
+    def /(v: Double): ArithmeticPostAgg        = arithmeticAgg(v, "/")
+    def quotient(v: Double): ArithmeticPostAgg = arithmeticAgg(v, "quotient")
+
+    def +(v: Symbol): ArithmeticPostAgg        = arithmeticFieldAgg(v, "+")
+    def -(v: Symbol): ArithmeticPostAgg        = arithmeticFieldAgg(v, "-")
+    def *(v: Symbol): ArithmeticPostAgg        = arithmeticFieldAgg(v, "*")
+    def /(v: Symbol): ArithmeticPostAgg        = arithmeticFieldAgg(v, "/")
+    def quotient(v: Symbol): ArithmeticPostAgg = arithmeticFieldAgg(v, "quotient")
+
+    def hyperUniqueCardinality: HyperUniqueCardinalityPostAgg =
+      HyperUniqueCardinalityPostAgg(s.name)
+
+  }
+
+  implicit class StringOps(val value: String) extends AnyVal {
+    def ===(s: Symbol): FilteringExpression = s === value
+    def =!=(s: Symbol): FilteringExpression = s =!= value
+  }
+
+  implicit class NumOps(val value: Double) extends AnyVal {
+
+    @inline
+    private def arithmeticAgg(s: Symbol, fn: String): PostAggregationExpression =
+      ArithmeticPostAgg(
+        new ConstantPostAgg(value),
+        new FieldAccessPostAgg(s.name),
+        fn = fn
+      )
+
+    def ===(s: Symbol): FilteringExpression = s === value
+    def =!=(s: Symbol): FilteringExpression = s =!= value
+    def >(s: Symbol): FilteringExpression   = s < value
+    def >=(s: Symbol): FilteringExpression  = s =< value
+    def <(s: Symbol): FilteringExpression   = s > value
+    def =<(s: Symbol): FilteringExpression  = s >= value
+
+    def +(s: Symbol): PostAggregationExpression        = arithmeticAgg(s, "+")
+    def -(s: Symbol): PostAggregationExpression        = arithmeticAgg(s, "-")
+    def *(s: Symbol): PostAggregationExpression        = arithmeticAgg(s, "*")
+    def /(s: Symbol): PostAggregationExpression        = arithmeticAgg(s, "/")
+    def quotient(s: Symbol): PostAggregationExpression = arithmeticAgg(s, "quotient")
+
+  }
 }

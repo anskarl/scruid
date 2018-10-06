@@ -153,8 +153,7 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
       val query = DQL
         .agg('count.longSum as "count")
         .agg(
-          'channel.inFiltered('count.longSum as "filteredCount",
-                              values = Seq("#en.wikipedia", "#de.wikipedia"): _*)
+          'channel.inFiltered('count.longSum as "filteredCount", "#en.wikipedia", "#de.wikipedia")
         )
         .interval("2011-06-01/2017-06-01")
         .topN(dimension = 'isAnonymous, metric = "count", threshold = 5)
@@ -199,6 +198,31 @@ class DQLSpec extends WordSpec with Matchers with ScalaFutures {
         topN(1) shouldBe AggregatedFilteredAnonymous(count = 3799,
                                                      filteredCount = 1556,
                                                      isAnonymous = "true")
+      }
+    }
+  }
+
+  "DQL also work with post 'arithmetic' postaggregations" should {
+    "successfully be interpreted by Druid" in {
+
+      val query: TopNQuery = DQL
+        .topN('isAnonymous, metric = "count", threshold = 5)
+        .agg(count)
+        .postAgg(('count / 2) as "halfCount")
+        .interval("2011-06-01/2017-06-01")
+        .build()
+
+      val request = query.execute()
+
+      whenReady(request) { response =>
+        val topN = response.list[PostAggregationAnonymous]
+        topN.size shouldBe 2
+        topN.head shouldBe PostAggregationAnonymous(count = 35445,
+                                                    halfCount = 17722.5,
+                                                    isAnonymous = "false")
+        topN(1) shouldBe PostAggregationAnonymous(count = 3799,
+                                                  halfCount = 1899.5,
+                                                  isAnonymous = "true")
       }
     }
   }

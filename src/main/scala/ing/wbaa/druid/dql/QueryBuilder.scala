@@ -17,17 +17,23 @@
 
 package ing.wbaa.druid.dql
 
-import ing.wbaa.druid.{ Direction, _ }
+import ing.wbaa.druid._
 import ing.wbaa.druid.definitions._
+import ing.wbaa.druid.dql.expressions._
 
 private[dql] sealed trait QueryBuilderCommons {
 
   protected var dataSourceOpt                   = Option.empty[String]
   protected var granularityOpt                  = Option.empty[Granularity]
   protected var aggregations: List[Aggregation] = Nil
-  protected var intervals: List[String]         = Nil
+
+  protected var complexAggregationNames: Set[String] = Set.empty[String]
+
+  protected var intervals: List[String] = Nil
 
   protected var filters: List[Filter] = Nil
+
+  protected var postAggregationExpr: List[PostAggregationExpression] = Nil
 
   def from(dataSource: String): this.type = {
     dataSourceOpt = Option(dataSource)
@@ -40,8 +46,15 @@ private[dql] sealed trait QueryBuilderCommons {
   }
 
   def agg(aggs: AggregationExpression*): this.type = {
-    aggregations =
-      aggs.foldLeft(aggregations)((aggregations, currentAgg) => currentAgg.build() :: aggregations)
+
+    complexAggregationNames ++= aggs.filter(_.isComplex).map(_.getName)
+    aggregations = aggs.foldRight(aggregations)((agg, acc) => agg.build() :: acc)
+
+    this
+  }
+
+  def postAgg(postAggs: PostAggregationExpression*): this.type = {
+    postAggregationExpr = postAggs.foldRight(postAggregationExpr)((agg, acc) => agg :: acc)
     this
   }
 
@@ -51,7 +64,7 @@ private[dql] sealed trait QueryBuilderCommons {
   }
 
   def intervals(ints: String*): this.type = {
-    intervals = ints.foldLeft(intervals)((intervals, currentInt) => currentInt :: intervals)
+    intervals ++= ints
     this
   }
 
@@ -70,10 +83,15 @@ private[dql] sealed trait QueryBuilderCommons {
     other.dataSourceOpt = dataSourceOpt
     other.granularityOpt = granularityOpt
     other.aggregations = aggregations
+    other.complexAggregationNames = complexAggregationNames
     other.intervals = intervals
     other.filters = filters
+    other.postAggregationExpr = postAggregationExpr
     other
   }
+
+  protected def getPostAggs: List[PostAggregation] =
+    postAggregationExpr.map(expr => expr.build(complexAggregationNames))
 
 }
 
@@ -86,14 +104,15 @@ final class QueryBuilder private[dql] () extends QueryBuilderCommons {
     this
   }
 
-  def build(): TimeSeriesQuery =
+  def build()(implicit druidConfig: DruidConfig): TimeSeriesQuery =
     TimeSeriesQuery(
       aggregations = this.aggregations,
       intervals = this.intervals,
       filter = this.getFilters,
       granularity = this.granularityOpt.getOrElse(GranularityType.Week),
       descending = this.descending.toString,
-      dataSource = this.dataSourceOpt.getOrElse(DruidConfig.datasource)
+      dataSource = this.dataSourceOpt.getOrElse(druidConfig.datasource),
+      postAggregations = this.getPostAggs
     )
 
   def topN(dimension: Dim, metric: String, threshold: Int): TopNQueryBuilder =
@@ -106,21 +125,14 @@ final class QueryBuilder private[dql] () extends QueryBuilderCommons {
 
 final class TopNQueryBuilder private[dql] (dimension: Dim, metric: String, n: Int)
     extends QueryBuilderCommons {
-  protected var isDescending                            = true
-  protected var postAggregations: List[PostAggregation] = Nil
+  protected var isDescending = true
 
   def setDescending(v: Boolean): this.type = {
     isDescending = v
     this
   }
 
-  def postAgg(aggs: PostAggregation*): this.type = {
-    postAggregations =
-      aggs.foldLeft(postAggregations)((postAggs, currentPostAgg) => currentPostAgg :: postAggs)
-    this
-  }
-
-  def build(): TopNQuery =
+  def build()(implicit druidConfig: DruidConfig): TopNQuery =
     TopNQuery(
       dimension = this.dimension.build(),
       threshold = n,
@@ -129,8 +141,8 @@ final class TopNQueryBuilder private[dql] (dimension: Dim, metric: String, n: In
       intervals = this.intervals,
       granularity = this.granularityOpt.getOrElse(GranularityType.All),
       filter = this.getFilters,
-      dataSource = this.dataSourceOpt.getOrElse(DruidConfig.datasource),
-      postAggregations = Nil
+      dataSource = this.dataSourceOpt.getOrElse(druidConfig.datasource),
+      postAggregations = this.getPostAggs
     )
 
 }
@@ -148,11 +160,15 @@ final class GroupByQueryBuilder private[dql] (dimensions: Seq[Dim]) extends Quer
     this
   }
 
-  def limit(n: Int,
-            direction: Direction,
-            dimensionOrder: DimensionOrder = DimensionOrder.lexicographic): this.type = {
+  def limit(
+      n: Int,
+      direction: Direction,
+      dimensionOrderType: DimensionOrderType = DimensionOrderType.lexicographic
+  ): this.type = {
     limitOpt = Option(n)
-    limitCols = dimensions.map(dim => OrderByColumnSpec(dim.name, direction, dimensionOrder))
+    limitCols = dimensions.map(
+      dim => OrderByColumnSpec(dim.name, direction, DimensionOrder(dimensionOrderType))
+    )
     this
   }
 
@@ -167,7 +183,7 @@ final class GroupByQueryBuilder private[dql] (dimensions: Seq[Dim]) extends Quer
     this
   }
 
-  def build(): GroupByQuery = {
+  def build()(implicit druidConfig: DruidConfig): GroupByQuery = {
 
     val havingOpt =
       if (havingExpressions.isEmpty) None
@@ -188,17 +204,16 @@ final class GroupByQueryBuilder private[dql] (dimensions: Seq[Dim]) extends Quer
       where(new And(excludeNullsExpressions))
     }
 
-    val resultingFilters = this.getFilters
-
     GroupByQuery(
       aggregations = this.aggregations,
       intervals = this.intervals,
-      filter = resultingFilters,
+      filter = this.getFilters,
       dimensions = this.dimensions.map(_.build()).toList,
       granularity = this.granularityOpt.getOrElse(GranularityType.All),
-      dataSource = this.dataSourceOpt.getOrElse(DruidConfig.datasource),
+      dataSource = this.dataSourceOpt.getOrElse(druidConfig.datasource),
       having = havingOpt,
-      limitSpec = limitSpecOpt
+      limitSpec = limitSpecOpt,
+      postAggregations = this.getPostAggs
     )
   }
 

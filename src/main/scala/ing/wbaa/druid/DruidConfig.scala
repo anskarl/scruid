@@ -23,7 +23,7 @@ import scala.language.implicitConversions
 /*
  * Druid API Config Immutable
  */
-object DruidConfig {
+/*object DruidConfig {
   implicit def asFiniteDuration(d: java.time.Duration): FiniteDuration =
     scala.concurrent.duration.Duration.fromNanos(d.toNanos)
 
@@ -37,4 +37,31 @@ object DruidConfig {
   val url: String                            = druidConfig.getString("url")
   val datasource: String                     = druidConfig.getString("datasource")
   val responseParsingTimeout: FiniteDuration = druidConfig.getDuration("response-parsing-timeout")
+}*/
+
+class DruidConfig(val host: String,
+                  val port: Int,
+                  val secure: Boolean,
+                  val url: String,
+                  val datasource: String,
+                  val responseParsingTimeout: FiniteDuration)
+
+object DruidConfig {
+
+  private val config      = ConfigFactory.load()
+  private val druidConfig = config.getConfig("druid")
+
+  implicit def asFiniteDuration(d: java.time.Duration): FiniteDuration =
+    scala.concurrent.duration.Duration.fromNanos(d.toNanos)
+
+  implicit val defaultConfig: DruidConfig = apply()
+
+  def apply(host: String = druidConfig.getString("host"),
+            port: Int = druidConfig.getInt("port"),
+            secure: Boolean = druidConfig.getBoolean("secure"),
+            url: String = druidConfig.getString("url"),
+            datasource: String = druidConfig.getString("datasource"),
+            responseParsingTimeout: FiniteDuration =
+              druidConfig.getDuration("response-parsing-timeout")): DruidConfig =
+    new DruidConfig(host, port, secure, url, datasource, responseParsingTimeout)
 }

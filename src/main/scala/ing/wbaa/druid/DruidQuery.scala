@@ -41,7 +41,7 @@ sealed trait DruidQuery {
   val filter: Option[Filter]
   val intervals: List[String]
 
-  def execute(): Future[DruidResponse] = DruidClient.doQuery(this)
+  def execute()(implicit conf: DruidConfig): Future[DruidResponse] = DruidClient.doQuery(this)
 }
 
 object DruidQuery {
@@ -61,9 +61,10 @@ case class GroupByQuery(
     filter: Option[Filter] = None,
     dimensions: List[Dimension] = List(),
     granularity: Granularity = GranularityType.All,
-    dataSource: String = DruidConfig.datasource,
+    dataSource: String = DruidConfig.defaultConfig.datasource,
     having: Option[Having] = None,
-    limitSpec: Option[LimitSpec] = None
+    limitSpec: Option[LimitSpec] = None,
+    postAggregations: List[PostAggregation] = List()
 ) extends DruidQuery {
 
   val queryType = QueryType.GroupBy
@@ -73,11 +74,18 @@ case class LimitSpec(limit: Int, columns: Seq[OrderByColumnSpec]) {
   val `type` = "default"
 }
 
+object LimitSpec {
+  implicit val encoder: Encoder[LimitSpec] = new Encoder[LimitSpec] {
+    override def apply(a: LimitSpec): Json = a.asJsonObject.add("type", a.`type`.asJson).asJson
+  }
+}
+
 case class OrderByColumnSpec(
     dimension: String,
     direction: Direction = Direction.ascending,
-    dimensionOrder: DimensionOrder = DimensionOrder.lexicographic
+    dimensionOrder: DimensionOrder = DimensionOrder()
 )
+case class DimensionOrder(`type`: DimensionOrderType = DimensionOrderType.lexicographic)
 
 sealed trait Direction extends Enum with LowerCaseEnumStringEncoder
 object Direction extends EnumCodec[Direction] {
@@ -86,13 +94,14 @@ object Direction extends EnumCodec[Direction] {
   val values: Set[Direction] = sealerate.values[Direction]
 }
 
-sealed trait DimensionOrder extends Enum with LowerCaseEnumStringEncoder
-object DimensionOrder extends EnumCodec[DimensionOrder] {
-  case object lexicographic extends DimensionOrder
-  case object alphanumeric  extends DimensionOrder
-  case object strlen        extends DimensionOrder
-  case object numeric       extends DimensionOrder
-  val values: Set[DimensionOrder] = sealerate.values[DimensionOrder]
+sealed trait DimensionOrderType extends Enum with LowerCaseEnumStringEncoder
+object DimensionOrderType extends EnumCodec[DimensionOrderType] {
+  case object lexicographic extends DimensionOrderType
+  case object alphanumeric  extends DimensionOrderType
+  case object strlen        extends DimensionOrderType
+  case object numeric       extends DimensionOrderType
+  val values: Set[DimensionOrderType] = sealerate.values[DimensionOrderType]
+
 }
 
 case class TimeSeriesQuery(
@@ -101,7 +110,8 @@ case class TimeSeriesQuery(
     filter: Option[Filter] = None,
     granularity: Granularity = GranularityType.Week,
     descending: String = "true",
-    dataSource: String = DruidConfig.datasource
+    dataSource: String = DruidConfig.defaultConfig.datasource,
+    postAggregations: List[PostAggregation] = List()
 ) extends DruidQuery {
   val queryType = QueryType.Timeseries
 }
@@ -114,7 +124,7 @@ case class TopNQuery(
     intervals: List[String],
     granularity: Granularity = GranularityType.All,
     filter: Option[Filter] = None,
-    dataSource: String = DruidConfig.datasource,
+    dataSource: String = DruidConfig.defaultConfig.datasource,
     postAggregations: List[PostAggregation] = List()
 ) extends DruidQuery {
   val queryType = QueryType.TopN

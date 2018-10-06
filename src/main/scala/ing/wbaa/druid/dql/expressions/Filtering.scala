@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-package ing.wbaa.druid.dql
+package ing.wbaa.druid.dql.expressions
 
-import ing.wbaa.druid.{ definitions, DimensionOrder }
+import ing.wbaa.druid.{ definitions, DimensionOrderType }
 import ing.wbaa.druid.definitions.SearchQuerySpecType.InsensitiveContains
 import ing.wbaa.druid.definitions._
 
@@ -101,7 +101,7 @@ class Gt(name: String, value: Double) extends FilteringExpression {
       dimension = name,
       lower = Option(value.toString),
       lowerStrict = Some(false),
-      ordering = Option(DimensionOrder.numeric)
+      ordering = Option(DimensionOrderType.numeric)
     )
 
   override protected[dql] def createHaving: Having = GreaterThanHaving(name, value)
@@ -113,7 +113,7 @@ class GtEq(name: String, value: Double) extends FilteringExpression {
       dimension = name,
       lower = Option(value.toString),
       lowerStrict = Some(true),
-      ordering = Option(DimensionOrder.numeric)
+      ordering = Option(DimensionOrderType.numeric)
     )
 
   override protected[dql] def createHaving: Having =
@@ -126,7 +126,7 @@ class Lt(name: String, value: Double) extends FilteringExpression {
       dimension = name,
       upper = Option(value.toString),
       upperStrict = Some(false),
-      ordering = Option(DimensionOrder.numeric)
+      ordering = Option(DimensionOrderType.numeric)
     )
 
   override protected[dql] def createHaving: Having = LessThanHaving(name, value)
@@ -139,7 +139,7 @@ class LtEq(name: String, value: Double) extends FilteringExpression {
       dimension = name,
       upper = Option(value.toString),
       upperStrict = Some(true),
-      ordering = Option(DimensionOrder.numeric)
+      ordering = Option(DimensionOrderType.numeric)
     )
 
   override protected[dql] def createHaving: Having =
@@ -158,7 +158,7 @@ case class Bound(dimension: String,
                  upper: Option[String] = None,
                  lowerStrict: Option[Boolean] = None,
                  upperStrict: Option[Boolean] = None,
-                 ordering: Option[DimensionOrder] = None,
+                 ordering: Option[DimensionOrderType] = None,
                  extractionFn: Option[ExtractionFn] = None)
     extends FilteringExpression
     with FilterOnlyOperator {
@@ -166,13 +166,13 @@ case class Bound(dimension: String,
   def set(
       lowerStrict: Boolean = false,
       upperStrict: Boolean = false,
-      ordering: DimensionOrder = DimensionOrder.lexicographic
+      ordering: DimensionOrderType = DimensionOrderType.lexicographic
   ): FilteringExpression =
     copy(lowerStrict = Option(lowerStrict),
          upperStrict = Option(upperStrict),
          ordering = Option(ordering))
 
-  def withOrdering(v: DimensionOrder): Bound = copy(ordering = Option(v))
+  def withOrdering(v: DimensionOrderType): Bound = copy(ordering = Option(v))
 
   def withExtractionFn(fn: ExtractionFn): Bound = copy(extractionFn = Option(fn))
 

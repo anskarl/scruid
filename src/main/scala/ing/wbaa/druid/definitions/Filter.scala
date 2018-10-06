@@ -125,7 +125,7 @@ case class BoundFilter(
     upper: Option[String] = None,
     lowerStrict: Option[Boolean] = None,
     upperStrict: Option[Boolean] = None,
-    ordering: Option[DimensionOrder] = None,
+    ordering: Option[DimensionOrderType] = None,
     extractionFn: Option[ExtractionFn] = None
 ) extends Filter {
   val `type` = FilterType.Bound

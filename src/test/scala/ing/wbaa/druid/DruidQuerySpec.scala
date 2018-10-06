@@ -178,8 +178,6 @@ class DruidQuerySpec extends WordSpec with Matchers with ScalaFutures {
       import io.circe.generic.encoding._
       import io.circe.syntax._
 
-      println(q.asJson)
-
       val request = q.execute()
 
       whenReady(request) { response =>

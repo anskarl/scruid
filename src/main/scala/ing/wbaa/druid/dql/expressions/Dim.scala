@@ -15,19 +15,19 @@
  * limitations under the License.
  */
 
-package ing.wbaa.druid.dql
+package ing.wbaa.druid.dql.expressions
 
 import ing.wbaa.druid.definitions._
 
 case class Dim(name: String,
                outputNameOpt: Option[String] = None,
                outputTypeOpt: Option[String] = None,
-               extractionFnOpt: Option[ExtractionFn] = None) {
+               extractionFnOpt: Option[ExtractionFn] = None)
+    extends Named[Dim] {
 
-  def alias(name: String): Dim =
-    copy(outputNameOpt = Option(name))
+  override def alias(name: String): Dim = copy(outputNameOpt = Option(name))
 
-  def as(name: String): Dim = alias(name)
+  override def getName: String = name
 
   def cast(outputType: String): Dim = {
     val uppercase = outputType.toUpperCase
@@ -44,10 +44,10 @@ case class Dim(name: String,
   protected[dql] def build(): Dimension =
     extractionFnOpt match {
       case Some(extractionFn) =>
-        ExtractionDimension(name, outputNameOpt, outputTypeOpt, extractionFn)
+        ExtractionDimension(name, outputNameOpt.orElse(Option(name)), outputTypeOpt, extractionFn)
 
       case None =>
-        DefaultDimension(name, outputNameOpt, outputTypeOpt)
+        DefaultDimension(name, outputNameOpt.orElse(Option(name)), outputTypeOpt)
     }
 }
 

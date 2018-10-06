@@ -25,7 +25,8 @@ import io.circe.syntax._
 
 sealed trait PostAggregationType extends Enum with CamelCaseEnumStringEncoder
 object PostAggregationType extends EnumCodec[PostAggregationType] {
-  case object Arithmetic extends PostAggregationType
+  case object Arithmetic             extends PostAggregationType
+  case object HyperUniqueCardinality extends PostAggregationType
 
   val values: Set[PostAggregationType] = sealerate.values[PostAggregationType]
 }
@@ -40,6 +41,7 @@ object PostAggregation {
     final def apply(pAgg: PostAggregation): Json =
       (pAgg match {
         case x: ArithmeticPostAggregation => x.asJsonObject
+        case x: HyperUniqueCardinality    => x.asJsonObject
       }).add("type", pAgg.`type`.asJson).asJson
   }
 }
@@ -51,10 +53,15 @@ case class ArithmeticPostAggregation(name: String,
   override val `type` = PostAggregationType.Arithmetic
 }
 
+case class HyperUniqueCardinality(name: String, fieldName: String) extends PostAggregation {
+  override val `type` = PostAggregationType.HyperUniqueCardinality
+}
+
 sealed trait PostAggregatorType extends Enum with CamelCaseEnumStringEncoder
 object PostAggregatorType extends EnumCodec[PostAggregatorType] {
-  case object FieldAccess extends PostAggregatorType
-  case object Constant    extends PostAggregatorType
+  case object FieldAccess           extends PostAggregatorType
+  case object FinalizingFieldAccess extends PostAggregatorType
+  case object Constant              extends PostAggregatorType
 
   val values: Set[PostAggregatorType] = sealerate.values[PostAggregatorType]
 }
@@ -76,6 +83,12 @@ object PostAggregator {
 case class FieldAccessPostAggregator(name: String, fieldName: String) extends PostAggregator {
   override val `type`: PostAggregatorType = PostAggregatorType.FieldAccess
 }
+
+case class FinalizingFieldAccessPostAggregator(name: String, fieldName: String)
+    extends PostAggregator {
+  override val `type`: PostAggregatorType = PostAggregatorType.FinalizingFieldAccess
+}
+
 case class ConstantPostAggregator(name: String, value: Double) extends PostAggregator {
   override val `type`: PostAggregatorType = PostAggregatorType.Constant
 }
