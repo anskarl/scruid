@@ -39,13 +39,6 @@ sealed trait FilteringExpression {
   def and(others: FilteringExpression*): FilteringExpression = new And(this :: others.toList)
 }
 
-class TimestampDim(ts: Long = 0L) extends FilteringExpression with FilterOnlyOperator {
-  override protected[dql] def createFilter: Filter =
-    SelectFilter(dimension = "__time", value = ts.toString)
-
-  def ===(ts: Long): FilteringExpression = new TimestampDim(ts)
-}
-
 class And(expressions: List[FilteringExpression]) extends FilteringExpression {
   override protected[dql] def createFilter: Filter = AndFilter(expressions.map(_.createFilter))
   override protected[dql] def createHaving: Having = AndHaving(expressions.map(_.createHaving))
@@ -147,12 +140,6 @@ class LtEq(name: String, value: Double) extends FilteringExpression {
 
 }
 
-class ColumnComparison(dimensions: List[String])
-    extends FilteringExpression
-    with FilterOnlyOperator {
-  override protected[dql] def createFilter: Filter = ColumnComparisonFilter(dimensions)
-}
-
 case class Bound(dimension: String,
                  lower: Option[String] = None,
                  upper: Option[String] = None,
@@ -163,14 +150,6 @@ case class Bound(dimension: String,
     extends FilteringExpression
     with FilterOnlyOperator {
 
-  def set(
-      lowerStrict: Boolean = false,
-      upperStrict: Boolean = false,
-      ordering: DimensionOrderType = DimensionOrderType.lexicographic
-  ): FilteringExpression =
-    copy(lowerStrict = Option(lowerStrict),
-         upperStrict = Option(upperStrict),
-         ordering = Option(ordering))
 
   def withOrdering(v: DimensionOrderType): Bound = copy(ordering = Option(v))
 
@@ -179,6 +158,12 @@ case class Bound(dimension: String,
   override protected[dql] def createFilter: Filter =
     BoundFilter(dimension, lower, upper, lowerStrict, upperStrict, ordering, extractionFn)
 
+}
+
+class ColumnComparison(dimensions: List[String])
+    extends FilteringExpression
+    with FilterOnlyOperator {
+  override protected[dql] def createFilter: Filter = ColumnComparisonFilter(dimensions)
 }
 
 class Interval(dimension: String, values: List[String])

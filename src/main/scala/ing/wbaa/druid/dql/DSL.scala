@@ -25,8 +25,6 @@ import scala.language.implicitConversions
 
 object DSL {
 
-  final val TS = new TimestampDim()
-
   def dim(name: String): Symbol = Symbol(name)
 
   implicit class StringToColumn(val sc: StringContext) extends AnyVal {
@@ -92,17 +90,57 @@ object DSL {
 
     def =<(value: Double): FilteringExpression = new LtEq(s.name, value)
 
-    def between(lower: String, upper: String): Bound =
-      Bound(dimension = s.name,
-            lower = Option(lower),
-            upper = Option(upper),
-            ordering = Option(DimensionOrderType.lexicographic))
+    def between(lower: Double, upper: Double, lowerStrict: Boolean, upperStrict: Boolean): Bound =
+      Bound(
+        dimension = s.name,
+        lower = Option(lower.toString),
+        lowerStrict = Option(lowerStrict),
+        upper = Option(upper.toString),
+        upperStrict = Option(upperStrict),
+        ordering = Option(DimensionOrderType.numeric)
+      )
 
     def between(lower: Double, upper: Double): Bound =
+      between(lower, upper, lowerStrict = false, upperStrict = false)
+
+    def >(value: String): Bound =
       Bound(dimension = s.name,
-            lower = Option(lower.toString),
-            upper = Option(upper.toString),
-            ordering = Option(DimensionOrderType.numeric))
+            lower = Option(value),
+            upper = None,
+            ordering = Option(DimensionOrderType.lexicographic))
+
+    def >=(value: String): Bound =
+      Bound(dimension = s.name,
+            lower = Option(value),
+            lowerStrict = Some(true),
+            upper = None,
+            ordering = Option(DimensionOrderType.lexicographic))
+
+    def <(value: String): Bound =
+      Bound(dimension = s.name,
+            lower = None,
+            upper = Option(value),
+            ordering = Option(DimensionOrderType.lexicographic))
+
+    def =<(value: String): Bound =
+      Bound(dimension = s.name,
+            lower = None,
+            upper = Option(value),
+            upperStrict = Some(true),
+            ordering = Option(DimensionOrderType.lexicographic))
+
+    def between(lower: String, upper: String, lowerStrict: Boolean, upperStrict: Boolean): Bound =
+      Bound(
+        dimension = s.name,
+        lower = Option(lower),
+        lowerStrict = Option(lowerStrict),
+        upper = Option(upper),
+        upperStrict = Option(upperStrict),
+        ordering = Option(DimensionOrderType.lexicographic)
+      )
+
+    def between(lower: String, upper: String): Bound =
+      between(lower, upper, lowerStrict = false, upperStrict = false)
 
     def interval(values: String*): FilteringExpression = new Interval(s.name, values.toList)
 
