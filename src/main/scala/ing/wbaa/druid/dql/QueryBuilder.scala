@@ -198,7 +198,7 @@ final class GroupByQueryBuilder private[dql] (dimensions: Seq[Dim]) extends Quer
 
     if (excludeNullsOpt.contains(true)) {
       val excludeNullsExpressions = dimensions
-        .map(dim => new Not(new NullDim(dim.name)))
+        .map(dim => new Not(new NullDim(dim)))
         .toList
 
       where(new And(excludeNullsExpressions))

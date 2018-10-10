@@ -94,22 +94,33 @@ object FilterOperators {
   }
 }
 
-case class SelectFilter(dimension: String, value: Option[String]) extends Filter {
+case class SelectFilter(dimension: String,
+                        value: Option[String],
+                        extractionFn: Option[ExtractionFn] = None)
+    extends Filter {
+
   val `type` = FilterType.Selector
 }
 object SelectFilter {
   def apply(dimension: String, value: String): SelectFilter =
     SelectFilter(dimension = dimension, value = Some(value))
 }
-case class RegexFilter(dimension: String, pattern: String) extends Filter {
+case class RegexFilter(dimension: String,
+                       pattern: String,
+                       extractionFn: Option[ExtractionFn] = None)
+    extends Filter {
   val `type` = FilterType.Regex
 }
 
-case class LikeFilter(dimension: String, pattern: String) extends Filter {
+case class LikeFilter(dimension: String, pattern: String, extractionFn: Option[ExtractionFn] = None)
+    extends Filter {
   val `type` = FilterType.Like
 }
 
-case class InFilter(dimension: String, values: Seq[String]) extends Filter {
+case class InFilter(dimension: String,
+                    values: Seq[String],
+                    extractionFn: Option[ExtractionFn] = None)
+    extends Filter {
   val `type` = FilterType.In
 }
 case class AndFilter(fields: List[Filter]) extends Filter { val `type` = FilterType.And }
@@ -131,7 +142,7 @@ case class BoundFilter(
   val `type` = FilterType.Bound
 }
 
-case class ColumnComparisonFilter(dimensions: List[String]) extends Filter {
+case class ColumnComparisonFilter(dimensions: List[Dimension]) extends Filter {
   val `type` = FilterType.ColumnComparison
 }
 
@@ -155,6 +166,8 @@ sealed trait SearchQuerySpecType extends Enum with CamelCaseEnumStringEncoder
 object SearchQuerySpecType extends EnumCodec[SearchQuerySpecType] {
   case object Contains            extends SearchQuerySpecType
   case object InsensitiveContains extends SearchQuerySpecType
+  case object Fragment            extends SearchQuerySpecType
+
   val values: Set[SearchQuerySpecType] = sealerate.values[SearchQuerySpecType]
 }
 
@@ -179,4 +192,9 @@ case class ContainsCaseSensitive(value: String, caseSensitive: Option[Boolean] =
 
 case class ContainsInsensitive(value: String) extends SearchQuerySpec {
   val `type` = SearchQuerySpecType.InsensitiveContains
+}
+
+case class Fragment(values: List[String], caseSensitive: Option[Boolean] = None)
+    extends SearchQuerySpec {
+  val `type` = SearchQuerySpecType.Fragment
 }

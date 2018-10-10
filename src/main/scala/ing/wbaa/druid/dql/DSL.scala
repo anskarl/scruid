@@ -25,13 +25,15 @@ import scala.language.implicitConversions
 
 object DSL {
 
-  def dim(name: String): Symbol = Symbol(name)
+  def DQL: QueryBuilder = new QueryBuilder
+
+  implicit def symbolToDim(s: Symbol): Dim = new Dim(s.name)
 
   implicit class StringToColumn(val sc: StringContext) extends AnyVal {
-    def d(args: Any*): Symbol = Symbol(sc.s(args: _*))
+    def d(args: Any*): Dim = Dim(sc.s(args: _*))
   }
 
-  def DQL: QueryBuilder = new QueryBuilder
+  def dim(name: String): Dim = Dim(name)
 
   def not(op: FilteringExpression): FilteringExpression = op match {
     case neg: Not => neg.op
@@ -46,119 +48,10 @@ object DSL {
     override protected[dql] def createFilter: Filter = value.createFilter
   }
 
-  implicit class DimOps(val s: Symbol) extends AnyVal {
-
-    @inline
-    private def eqVal(value: String): FilteringExpression = new EqString(s.name, value)
-
-    @inline
-    private def eqNum(value: Double): FilteringExpression = new EqDouble(s.name, value)
-
-    @inline
-    private def compareWith(other: Symbol): FilteringExpression =
-      new ColumnComparison(s.name :: other.name :: Nil)
-
-    def ===(other: Symbol): FilteringExpression = compareWith(other)
-
-    def ===(value: String): FilteringExpression = eqVal(value)
-
-    def ===(value: Double): FilteringExpression = eqNum(value)
-
-    def =!=(value: String): FilteringExpression = not(eqVal(value))
-
-    def =!=(value: Double): FilteringExpression = not(eqNum(value))
-
-    def =!=(other: Symbol): FilteringExpression = not(compareWith(other))
-
-    def in(values: String*): FilteringExpression = new In(s.name, values.toList)
-
-    def notIn(values: String*): FilteringExpression = not(new In(s.name, values.toList))
-
-    def like(pattern: String): FilteringExpression = new Like(s.name, pattern)
-
-    def regex(pattern: String): FilteringExpression = new Regex(s.name, pattern)
-
-    def isNull: FilteringExpression = new NullDim(s.name)
-
-    def isNotNull: FilteringExpression = not(this.isNull)
-
-    def >(value: Double): FilteringExpression = new Gt(s.name, value)
-
-    def >=(value: Double): FilteringExpression = new GtEq(s.name, value)
-
-    def <(value: Double): FilteringExpression = new Lt(s.name, value)
-
-    def =<(value: Double): FilteringExpression = new LtEq(s.name, value)
-
-    def between(lower: Double, upper: Double, lowerStrict: Boolean, upperStrict: Boolean): Bound =
-      Bound(
-        dimension = s.name,
-        lower = Option(lower.toString),
-        lowerStrict = Option(lowerStrict),
-        upper = Option(upper.toString),
-        upperStrict = Option(upperStrict),
-        ordering = Option(DimensionOrderType.numeric)
-      )
-
-    def between(lower: Double, upper: Double): Bound =
-      between(lower, upper, lowerStrict = false, upperStrict = false)
-
-    def >(value: String): Bound =
-      Bound(dimension = s.name,
-            lower = Option(value),
-            upper = None,
-            ordering = Option(DimensionOrderType.lexicographic))
-
-    def >=(value: String): Bound =
-      Bound(dimension = s.name,
-            lower = Option(value),
-            lowerStrict = Some(true),
-            upper = None,
-            ordering = Option(DimensionOrderType.lexicographic))
-
-    def <(value: String): Bound =
-      Bound(dimension = s.name,
-            lower = None,
-            upper = Option(value),
-            ordering = Option(DimensionOrderType.lexicographic))
-
-    def =<(value: String): Bound =
-      Bound(dimension = s.name,
-            lower = None,
-            upper = Option(value),
-            upperStrict = Some(true),
-            ordering = Option(DimensionOrderType.lexicographic))
-
-    def between(lower: String, upper: String, lowerStrict: Boolean, upperStrict: Boolean): Bound =
-      Bound(
-        dimension = s.name,
-        lower = Option(lower),
-        lowerStrict = Option(lowerStrict),
-        upper = Option(upper),
-        upperStrict = Option(upperStrict),
-        ordering = Option(DimensionOrderType.lexicographic)
-      )
-
-    def between(lower: String, upper: String): Bound =
-      between(lower, upper, lowerStrict = false, upperStrict = false)
-
-    def interval(values: String*): FilteringExpression = new Interval(s.name, values.toList)
-
-    def contains(value: String, caseSensitive: Boolean = true): FilteringExpression =
-      new Contains(s.name, value, caseSensitive)
-
-    def containsIgnoreCase(value: String): FilteringExpression =
-      new Contains(s.name, value, caseSensitive = false)
-
-    def containsInsensitive(value: String): FilteringExpression =
-      new InsensitiveContains(s.name, value)
-
-  }
-
   implicit def symbolToOrderByColumnSpec(s: Symbol): OrderByColumnSpec =
     OrderByColumnSpec(dimension = s.name)
 
-  implicit class OrderByColumnSpecValueClass(val s: Symbol) extends AnyVal {
+  implicit class OrderByColumnSpecValueClass(val s: Dim) extends AnyVal {
 
     def asc: OrderByColumnSpec =
       OrderByColumnSpec(dimension = s.name, direction = Direction.ascending)
@@ -180,8 +73,6 @@ object DSL {
         dimensionOrder = DimensionOrder(orderType)
       )
   }
-
-  implicit def symbolToDim(s: Symbol): Dim = Dim(s.name)
 
   def longSum(fieldName: Symbol): LongSumAgg = new LongSumAgg(fieldName.name)
 
@@ -252,7 +143,7 @@ object DSL {
                         rightField = new ConstantPostAgg(value),
                         fn = fn)
     @inline
-    private def arithmeticFieldAgg(right: Symbol, fn: String): ArithmeticPostAgg =
+    private def arithmeticFieldAgg(right: Dim, fn: String): ArithmeticPostAgg =
       ArithmeticPostAgg(leftField = new FieldAccessPostAgg(s.name),
                         rightField = new FieldAccessPostAgg(right.name),
                         fn = fn)
@@ -275,26 +166,26 @@ object DSL {
   }
 
   implicit class StringOps(val value: String) extends AnyVal {
-    def ===(s: Symbol): FilteringExpression = s === value
-    def =!=(s: Symbol): FilteringExpression = s =!= value
+    def ===(s: Dim): FilteringExpression = s === value
+    def =!=(s: Dim): FilteringExpression = s =!= value
   }
 
   implicit class NumOps(val value: Double) extends AnyVal {
 
     @inline
-    private def arithmeticAgg(s: Symbol, fn: String): PostAggregationExpression =
+    private def arithmeticAgg(s: Dim, fn: String): PostAggregationExpression =
       ArithmeticPostAgg(
         new ConstantPostAgg(value),
         new FieldAccessPostAgg(s.name),
         fn = fn
       )
 
-    def ===(s: Symbol): FilteringExpression = s === value
-    def =!=(s: Symbol): FilteringExpression = s =!= value
-    def >(s: Symbol): FilteringExpression   = s < value
-    def >=(s: Symbol): FilteringExpression  = s =< value
-    def <(s: Symbol): FilteringExpression   = s > value
-    def =<(s: Symbol): FilteringExpression  = s >= value
+    def ===(s: Dim): FilteringExpression = s === value
+    def =!=(s: Dim): FilteringExpression = s =!= value
+    def >(s: Dim): FilteringExpression   = s < value
+    def >=(s: Dim): FilteringExpression  = s =< value
+    def <(s: Dim): FilteringExpression   = s > value
+    def =<(s: Dim): FilteringExpression  = s >= value
 
     def +(s: Symbol): PostAggregationExpression        = arithmeticAgg(s, "+")
     def -(s: Symbol): PostAggregationExpression        = arithmeticAgg(s, "-")

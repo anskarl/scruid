@@ -58,85 +58,102 @@ class Not(val op: FilteringExpression) extends FilteringExpression {
     }
 }
 
-class EqString(name: String, value: String) extends FilteringExpression {
-  override protected[dql] def createFilter: Filter = SelectFilter(name, Option(value))
-  override protected[dql] def createHaving: Having = DimSelectorHaving(name, value)
+class EqString(dim: Dim, value: String) extends FilteringExpression {
+  override protected[dql] def createFilter: Filter =
+    SelectFilter(dim.name, Option(value), dim.extractionFnOpt)
+  override protected[dql] def createHaving: Having =
+    if (dim.extractionFnOpt.isDefined) FilterHaving(this.createFilter)
+    else DimSelectorHaving(dim.name, value)
+
 }
 
-class EqDouble(name: String, value: Double) extends FilteringExpression {
-  override protected[dql] def createFilter: Filter = SelectFilter(name, Option(value.toString))
-  override protected[dql] def createHaving: Having = EqualToHaving(name, value)
+class EqDouble(dim: Dim, value: Double) extends FilteringExpression {
+  override protected[dql] def createFilter: Filter =
+    SelectFilter(dim.name, Option(value.toString), dim.extractionFnOpt)
+  override protected[dql] def createHaving: Having =
+    if (dim.extractionFnOpt.isDefined) FilterHaving(this.createFilter)
+    else EqualToHaving(dim.name, value)
 }
 
 trait FilterOnlyOperator extends FilteringExpression {
   override protected[dql] def createHaving: Having = FilterHaving(this.createFilter)
 }
 
-class In(name: String, values: List[String]) extends FilteringExpression with FilterOnlyOperator {
-  override protected[dql] def createFilter: Filter = InFilter(name, values)
+class In(dim: Dim, values: List[String]) extends FilteringExpression with FilterOnlyOperator {
+  override protected[dql] def createFilter: Filter = InFilter(dim.name, values)
 }
 
-class Like(name: String, pattern: String) extends FilteringExpression with FilterOnlyOperator {
-  override protected[dql] def createFilter: Filter = LikeFilter(name, pattern)
+class Like(dim: Dim, pattern: String) extends FilteringExpression with FilterOnlyOperator {
+  override protected[dql] def createFilter: Filter = LikeFilter(dim.name, pattern)
 }
 
-class Regex(name: String, pattern: String) extends FilteringExpression with FilterOnlyOperator {
-  override protected[dql] def createFilter: Filter = RegexFilter(name, pattern)
+class Regex(dim: Dim, pattern: String) extends FilteringExpression with FilterOnlyOperator {
+  override protected[dql] def createFilter: Filter = RegexFilter(dim.name, pattern)
 }
 
-class NullDim(name: String) extends FilteringExpression with FilterOnlyOperator {
-  override protected[dql] def createFilter: Filter = SelectFilter(name, None)
+class NullDim(dim: Dim) extends FilteringExpression with FilterOnlyOperator {
+  override protected[dql] def createFilter: Filter = SelectFilter(dim.name, None)
 }
 
-class Gt(name: String, value: Double) extends FilteringExpression {
+class Gt(dim: Dim, value: Double) extends FilteringExpression {
   override protected[dql] def createFilter: Filter =
     BoundFilter(
-      dimension = name,
+      dimension = dim.name,
       lower = Option(value.toString),
       lowerStrict = Some(false),
-      ordering = Option(DimensionOrderType.numeric)
+      ordering = Option(DimensionOrderType.numeric),
+      extractionFn = dim.extractionFnOpt
     )
 
-  override protected[dql] def createHaving: Having = GreaterThanHaving(name, value)
+  override protected[dql] def createHaving: Having =
+    if (dim.extractionFnOpt.isDefined) FilterHaving(this.createFilter)
+    else GreaterThanHaving(dim.name, value)
 }
 
-class GtEq(name: String, value: Double) extends FilteringExpression {
+class GtEq(dim: Dim, value: Double) extends FilteringExpression {
   override protected[dql] def createFilter: Filter =
     BoundFilter(
-      dimension = name,
+      dimension = dim.name,
       lower = Option(value.toString),
       lowerStrict = Some(true),
-      ordering = Option(DimensionOrderType.numeric)
+      ordering = Option(DimensionOrderType.numeric),
+      extractionFn = dim.extractionFnOpt
     )
 
   override protected[dql] def createHaving: Having =
-    OrHaving(EqualToHaving(name, value) :: GreaterThanHaving(name, value) :: Nil)
+    if (dim.extractionFnOpt.isDefined) FilterHaving(this.createFilter)
+    else OrHaving(EqualToHaving(dim.name, value) :: GreaterThanHaving(dim.name, value) :: Nil)
 }
 
-class Lt(name: String, value: Double) extends FilteringExpression {
+class Lt(dim: Dim, value: Double) extends FilteringExpression {
   override protected[dql] def createFilter: Filter =
     BoundFilter(
-      dimension = name,
+      dimension = dim.name,
       upper = Option(value.toString),
       upperStrict = Some(false),
-      ordering = Option(DimensionOrderType.numeric)
-    )
-
-  override protected[dql] def createHaving: Having = LessThanHaving(name, value)
-}
-
-class LtEq(name: String, value: Double) extends FilteringExpression {
-
-  override protected[dql] def createFilter: Filter =
-    BoundFilter(
-      dimension = name,
-      upper = Option(value.toString),
-      upperStrict = Some(true),
-      ordering = Option(DimensionOrderType.numeric)
+      ordering = Option(DimensionOrderType.numeric),
+      extractionFn = dim.extractionFnOpt
     )
 
   override protected[dql] def createHaving: Having =
-    OrHaving(EqualToHaving(name, value) :: LessThanHaving(name, value) :: Nil)
+    if (dim.extractionFnOpt.isDefined) FilterHaving(this.createFilter)
+    else LessThanHaving(dim.name, value)
+}
+
+class LtEq(dim: Dim, value: Double) extends FilteringExpression {
+
+  override protected[dql] def createFilter: Filter =
+    BoundFilter(
+      dimension = dim.name,
+      upper = Option(value.toString),
+      upperStrict = Some(true),
+      ordering = Option(DimensionOrderType.numeric),
+      extractionFn = dim.extractionFnOpt
+    )
+
+  override protected[dql] def createHaving: Having =
+    if (dim.extractionFnOpt.isDefined) FilterHaving(this.createFilter)
+    else OrHaving(EqualToHaving(dim.name, value) :: LessThanHaving(dim.name, value) :: Nil)
 
 }
 
@@ -150,7 +167,6 @@ case class Bound(dimension: String,
     extends FilteringExpression
     with FilterOnlyOperator {
 
-
   def withOrdering(v: DimensionOrderType): Bound = copy(ordering = Option(v))
 
   def withExtractionFn(fn: ExtractionFn): Bound = copy(extractionFn = Option(fn))
@@ -160,28 +176,43 @@ case class Bound(dimension: String,
 
 }
 
-class ColumnComparison(dimensions: List[String])
-    extends FilteringExpression
-    with FilterOnlyOperator {
-  override protected[dql] def createFilter: Filter = ColumnComparisonFilter(dimensions)
+class ColumnComparison(dimensions: List[Dim]) extends FilteringExpression with FilterOnlyOperator {
+  override protected[dql] def createFilter: Filter = {
+
+    val dimSpecs = dimensions.map { dim =>
+      dim.extractionFnOpt match {
+        case Some(extractionFn) =>
+          ExtractionDimension(dimension = dim.name,
+                              outputName = dim.outputNameOpt,
+                              outputType = dim.outputTypeOpt,
+                              extractionFn = extractionFn)
+        case None =>
+          Dimension(dimension = dim.name,
+                    outputName = dim.outputNameOpt,
+                    outputType = dim.outputTypeOpt)
+      }
+    }
+    ColumnComparisonFilter(dimSpecs)
+  }
 }
 
-class Interval(dimension: String, values: List[String])
-    extends FilteringExpression
-    with FilterOnlyOperator {
-  override protected[dql] def createFilter: Filter = IntervalFilter(dimension, values)
+class Interval(dim: Dim, values: List[String]) extends FilteringExpression with FilterOnlyOperator {
+  override protected[dql] def createFilter: Filter =
+    IntervalFilter(dim.name, values, dim.extractionFnOpt)
 }
 
-class Contains(dimension: String, value: String, caseSensitive: Boolean)
+class Contains(dim: Dim, value: String, caseSensitive: Boolean)
     extends FilteringExpression
     with FilterOnlyOperator {
 
   override protected[dql] def createFilter: Filter =
-    SearchFilter(dimension, query = ContainsCaseSensitive(value, Option(caseSensitive)))
+    SearchFilter(dim.name,
+                 query = ContainsCaseSensitive(value, Option(caseSensitive)),
+                 dim.extractionFnOpt)
 }
-class InsensitiveContains(dimension: String, value: String)
+class InsensitiveContains(dim: Dim, value: String)
     extends FilteringExpression
     with FilterOnlyOperator {
   override protected[dql] def createFilter: Filter =
-    SearchFilter(dimension, query = definitions.ContainsInsensitive(value))
+    SearchFilter(dim.name, query = definitions.ContainsInsensitive(value), dim.extractionFnOpt)
 }
