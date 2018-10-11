@@ -17,7 +17,6 @@
 
 package ing.wbaa.druid.dql
 
-import ing.wbaa.druid.{ DimensionOrder, DimensionOrderType, Direction, OrderByColumnSpec }
 import ing.wbaa.druid.definitions._
 import ing.wbaa.druid.dql.expressions._
 
@@ -29,7 +28,7 @@ object DSL {
 
   implicit def symbolToDim(s: Symbol): Dim = new Dim(s.name)
 
-  implicit class StringToColumn(val sc: StringContext) extends AnyVal {
+  implicit class StringToDim(val sc: StringContext) extends AnyVal {
     def d(args: Any*): Dim = Dim(sc.s(args: _*))
   }
 
@@ -48,122 +47,94 @@ object DSL {
     override protected[dql] def createFilter: Filter = value.createFilter
   }
 
-  implicit def symbolToOrderByColumnSpec(s: Symbol): OrderByColumnSpec =
-    OrderByColumnSpec(dimension = s.name)
+  def extract(dim: Dim, fn: ExtractionFn): Dim        = dim.extract(fn)
+  def extract(dimName: String, fn: ExtractionFn): Dim = Dim(dimName, extractionFnOpt = Option(fn))
+  def extract(dim: Symbol, fn: ExtractionFn): Dim     = Dim(dim.name, extractionFnOpt = Option(fn))
 
-  implicit class OrderByColumnSpecValueClass(val s: Dim) extends AnyVal {
+  def longSum(dimName: String): LongSumAgg = new LongSumAgg(dimName)
+  def longSum(dim: Symbol): LongSumAgg     = longSum(dim.name)
+  def longSum(dim: Dim): LongSumAgg        = longSum(dim.name)
 
-    def asc: OrderByColumnSpec =
-      OrderByColumnSpec(dimension = s.name, direction = Direction.ascending)
+  def longMax(dimName: String): LongMaxAgg = new LongMaxAgg(dimName)
+  def longMax(dim: Symbol): LongMaxAgg     = longMax(dim.name)
+  def longMax(dim: Dim): LongMaxAgg        = longMax(dim.name)
 
-    def desc: OrderByColumnSpec =
-      OrderByColumnSpec(dimension = s.name, direction = Direction.descending)
+  def longFirst(dimName: String): LongFirstAgg = new LongFirstAgg(dimName)
+  def longFirst(dim: Symbol): LongFirstAgg     = longFirst(dim.name)
+  def longFirst(dim: Dim): LongFirstAgg        = longFirst(dim.name)
 
-    def asc(orderType: DimensionOrderType): OrderByColumnSpec =
-      OrderByColumnSpec(
-        dimension = s.name,
-        direction = Direction.ascending,
-        dimensionOrder = DimensionOrder(orderType)
-      )
+  def longLast(dimName: String): LongLastAgg = new LongLastAgg(dimName)
+  def longLast(dim: Symbol): LongLastAgg     = longLast(dim.name)
+  def longLast(dim: Dim): LongLastAgg        = longLast(dim.name)
 
-    def desc(orderType: DimensionOrderType): OrderByColumnSpec =
-      OrderByColumnSpec(
-        dimension = s.name,
-        direction = Direction.descending,
-        dimensionOrder = DimensionOrder(orderType)
-      )
-  }
+  def doubleSum(dimName: String): DoubleSumAgg = new DoubleSumAgg(dimName)
+  def doubleSum(dim: Symbol): DoubleSumAgg     = doubleSum(dim.name)
+  def doubleSum(dim: Dim): DoubleSumAgg        = doubleSum(dim.name)
 
-  def longSum(fieldName: Symbol): LongSumAgg = new LongSumAgg(fieldName.name)
+  def doubleMax(dimName: String): DoubleMaxAgg = new DoubleMaxAgg(dimName)
+  def doubleMax(dim: Symbol): DoubleMaxAgg     = doubleMax(dim.name)
+  def doubleMax(dim: Dim): DoubleMaxAgg        = doubleMax(dim.name)
 
-  def longMax(fieldName: Symbol): LongMaxAgg = new LongMaxAgg(fieldName.name)
+  def doubleFirst(dimName: String): DoubleFirstAgg = new DoubleFirstAgg(dimName)
+  def doubleFirst(dim: Symbol): DoubleFirstAgg     = doubleFirst(dim.name)
+  def doubleFirst(dim: Dim): DoubleFirstAgg        = doubleFirst(dim.name)
 
-  def longFirst(fieldName: Symbol): LongFirstAgg = new LongFirstAgg(fieldName.name)
+  def doubleLast(dimName: String): DoubleLastAgg = new DoubleLastAgg(dimName)
+  def doubleLast(dim: Symbol): DoubleLastAgg     = doubleLast(dim.name)
+  def doubleLast(dim: Dim): DoubleLastAgg        = doubleLast(dim.name)
 
-  def longLast(fieldName: Symbol): LongLastAgg = new LongLastAgg(fieldName.name)
+  def thetaSketch(dimName: String): ThetaSketchAgg = ThetaSketchAgg(dimName)
+  def thetaSketch(dim: Symbol): ThetaSketchAgg     = thetaSketch(dim.name)
+  def thetaSketch(dim: Dim): ThetaSketchAgg        = thetaSketch(dim.name)
 
-  def doubleSum(fieldName: Symbol): DoubleSumAgg = new DoubleSumAgg(fieldName.name)
+  def hyperUnique(dimName: String): HyperUniqueAgg = HyperUniqueAgg(dimName)
+  def hyperUnique(dim: Symbol): HyperUniqueAgg     = hyperUnique(dim.name)
+  def hyperUnique(dim: Dim): HyperUniqueAgg        = hyperUnique(dim.name)
 
-  def doubleMax(fieldName: Symbol): DoubleMaxAgg = new DoubleMaxAgg(fieldName.name)
-
-  def doubleFirst(fieldName: Symbol): DoubleFirstAgg = new DoubleFirstAgg(fieldName.name)
-
-  def doubleLast(fieldName: Symbol): DoubleLastAgg = new DoubleLastAgg(fieldName.name)
-
-  def thetaSketch(fieldName: Symbol): ThetaSketchAgg = ThetaSketchAgg(fieldName.name)
-
-  def hyperUnique(fieldName: Symbol): HyperUniqueAgg = HyperUniqueAgg(fieldName.name)
-
-  def inFiltered(dimension: Symbol,
+  def inFiltered(dimName: String,
                  aggregator: AggregationExpression,
                  values: String*): InFilteredAgg =
-    InFilteredAgg(dimension.name, values, aggregator.build())
+    InFilteredAgg(dimName, values, aggregator.build())
 
-  def selectorFiltered(dimension: Symbol,
+  def inFiltered(dim: Symbol, aggregator: AggregationExpression, values: String*): InFilteredAgg =
+    inFiltered(dim.name, aggregator, values: _*)
+
+  def inFiltered(dim: Dim, aggregator: AggregationExpression, values: String*): InFilteredAgg =
+    inFiltered(dim.name, aggregator, values: _*)
+
+  def selectorFiltered(dimName: String,
                        aggregator: AggregationExpression,
                        value: String): SelectorFilteredAgg =
-    SelectorFilteredAgg(dimension.name, Option(value), aggregator.build())
+    SelectorFilteredAgg(dimName, Option(value), aggregator.build())
 
-  def selectorFiltered(dimension: Symbol, aggregator: AggregationExpression): SelectorFilteredAgg =
-    SelectorFilteredAgg(dimension.name, None, aggregator.build())
+  def selectorFiltered(dim: Symbol,
+                       aggregator: AggregationExpression,
+                       value: String): SelectorFilteredAgg =
+    selectorFiltered(dim.name, aggregator, value)
 
-  implicit class SymbolAgg(val s: Symbol) extends AnyVal {
-    def longSum: AggregationExpression   = DSL.longSum(s)
-    def longMax: AggregationExpression   = DSL.longMax(s)
-    def longFirst: AggregationExpression = DSL.longFirst(s)
-    def longLast: AggregationExpression  = DSL.longLast(s)
+  def selectorFiltered(dim: Dim,
+                       aggregator: AggregationExpression,
+                       value: String): SelectorFilteredAgg =
+    selectorFiltered(dim.name, aggregator, value)
 
-    def doubleSum: AggregationExpression   = DSL.doubleSum(s)
-    def doubleMax: AggregationExpression   = DSL.doubleMax(s)
-    def doubleFirst: AggregationExpression = DSL.doubleFirst(s)
-    def doubleLast: AggregationExpression  = DSL.doubleLast(s)
+  def selectorFiltered(dimName: String, aggregator: AggregationExpression): SelectorFilteredAgg =
+    SelectorFilteredAgg(dimName, None, aggregator.build())
 
-    def thetaSketch: AggregationExpression = DSL.thetaSketch(s)
+  def selectorFiltered(dim: Symbol, aggregator: AggregationExpression): SelectorFilteredAgg =
+    SelectorFilteredAgg(dim.name, None, aggregator.build())
 
-    def hyperUnique: AggregationExpression = DSL.hyperUnique(s)
-
-    def inFiltered(aggregator: AggregationExpression, values: String*): AggregationExpression =
-      DSL.inFiltered(s, aggregator, values: _*)
-
-    def selectorFiltered(aggregator: AggregationExpression): SelectorFilteredAgg =
-      DSL.selectorFiltered(s, aggregator)
-
-    def selectorFiltered(aggregator: AggregationExpression, value: String): SelectorFilteredAgg =
-      DSL.selectorFiltered(s, aggregator, value)
-
-  }
+  def selectorFiltered(dim: Dim, aggregator: AggregationExpression): SelectorFilteredAgg =
+    SelectorFilteredAgg(dim.name, None, aggregator.build())
 
   def count: CountAgg = new CountAgg()
 
-  implicit class SymbolPostAgg(val s: Symbol) extends AnyVal {
+  // Post-aggs
 
-    @inline
-    private def arithmeticAgg(value: Double, fn: String): ArithmeticPostAgg =
-      ArithmeticPostAgg(leftField = new FieldAccessPostAgg(s.name),
-                        rightField = new ConstantPostAgg(value),
-                        fn = fn)
-    @inline
-    private def arithmeticFieldAgg(right: Dim, fn: String): ArithmeticPostAgg =
-      ArithmeticPostAgg(leftField = new FieldAccessPostAgg(s.name),
-                        rightField = new FieldAccessPostAgg(right.name),
-                        fn = fn)
+  def hyperUniqueCardinality(fieldName: String): PostAggregationExpression =
+    HyperUniqueCardinalityPostAgg(fieldName)
 
-    def +(v: Double): ArithmeticPostAgg        = arithmeticAgg(v, "+")
-    def -(v: Double): ArithmeticPostAgg        = arithmeticAgg(v, "-")
-    def *(v: Double): ArithmeticPostAgg        = arithmeticAgg(v, "*")
-    def /(v: Double): ArithmeticPostAgg        = arithmeticAgg(v, "/")
-    def quotient(v: Double): ArithmeticPostAgg = arithmeticAgg(v, "quotient")
-
-    def +(v: Symbol): ArithmeticPostAgg        = arithmeticFieldAgg(v, "+")
-    def -(v: Symbol): ArithmeticPostAgg        = arithmeticFieldAgg(v, "-")
-    def *(v: Symbol): ArithmeticPostAgg        = arithmeticFieldAgg(v, "*")
-    def /(v: Symbol): ArithmeticPostAgg        = arithmeticFieldAgg(v, "/")
-    def quotient(v: Symbol): ArithmeticPostAgg = arithmeticFieldAgg(v, "quotient")
-
-    def hyperUniqueCardinality: HyperUniqueCardinalityPostAgg =
-      HyperUniqueCardinalityPostAgg(s.name)
-
-  }
+  def hyperUniqueCardinality(dim: Dim): PostAggregationExpression =
+    HyperUniqueCardinalityPostAgg(dim.name, dim.outputNameOpt)
 
   implicit class StringOps(val value: String) extends AnyVal {
     def ===(s: Dim): FilteringExpression = s === value
@@ -173,7 +144,7 @@ object DSL {
   implicit class NumOps(val value: Double) extends AnyVal {
 
     @inline
-    private def arithmeticAgg(s: Dim, fn: String): PostAggregationExpression =
+    private def arithmeticPostAgg(s: Dim, fn: String): PostAggregationExpression =
       ArithmeticPostAgg(
         new ConstantPostAgg(value),
         new FieldAccessPostAgg(s.name),
@@ -187,11 +158,11 @@ object DSL {
     def <(s: Dim): FilteringExpression   = s > value
     def =<(s: Dim): FilteringExpression  = s >= value
 
-    def +(s: Symbol): PostAggregationExpression        = arithmeticAgg(s, "+")
-    def -(s: Symbol): PostAggregationExpression        = arithmeticAgg(s, "-")
-    def *(s: Symbol): PostAggregationExpression        = arithmeticAgg(s, "*")
-    def /(s: Symbol): PostAggregationExpression        = arithmeticAgg(s, "/")
-    def quotient(s: Symbol): PostAggregationExpression = arithmeticAgg(s, "quotient")
+    def +(s: Symbol): PostAggregationExpression        = arithmeticPostAgg(s, "+")
+    def -(s: Symbol): PostAggregationExpression        = arithmeticPostAgg(s, "-")
+    def *(s: Symbol): PostAggregationExpression        = arithmeticPostAgg(s, "*")
+    def /(s: Symbol): PostAggregationExpression        = arithmeticPostAgg(s, "/")
+    def quotient(s: Symbol): PostAggregationExpression = arithmeticPostAgg(s, "quotient")
 
   }
 }

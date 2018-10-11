@@ -224,17 +224,17 @@ Additionally, only when strings are given to bound operators, you can to specify
 extraction function:
 
 ```
-'dim > "10" withOrdering DimensionOrderType.alphanumeric 
+'dim > "10" withOrdering(DimensionOrderType.alphanumeric) 
 
 // "0.0" < dim < "10.0"
-'dim between("0.0", "10.0") withOrdering DimensionOrderType.alphanumeric 
+'dim between("0.0", "10.0") withOrdering(DimensionOrderType.alphanumeric) 
 ```
 
 ```
-'dim > "10" withOrdering DimensionOrderType.alphanumeric 
+'dim > "10" withOrdering(DimensionOrderType.alphanumeric)
 
 // "0.0" < dim < "10.0"
-'dim between("0.0", "10.0") withOrdering DimensionOrderType.alphanumeric
+'dim between("0.0", "10.0") withOrdering(DimensionOrderType.alphanumeric)
 
 // apply some extraction function
 'dim > "10" withExtractionFn(<some ExtractionFn>) 
@@ -310,9 +310,49 @@ val query: TimeSeriesQuery = DQL
 
 val response = query.execute()
 val result: List[TimeseriesCount] = response.list[TimeseriesCount]
-
 ```
 
 ## Group-by query
 
+```
+case class GroupByIsAnonymous(isAnonymous: String, count: Int)
+
+val query: GroupByQuery = DQL
+    .withGranularity(GranularityType.Day)
+    .interval("2011-06-01/2017-06-01")
+    .agg(count as "count")
+    .groupBy('isAnonymous)
+    .build()
+            
+val response = query.execute()
+val result: List[GroupByIsAnonymous] = response.list[GroupByIsAnonymous]
+```
+
 ## Top-N query
+
+```
+case class PostAggregationAnonymous(count: Int, isAnonymous: String, halfCount: Double)
+
+val query: TopNQuery = DQL
+    .withGranularity(GranularityType.Week)
+    .topN('isAnonymous, metric = "count", threshold = 5)
+    .agg(count as "agg_count")
+    .postAgg(('agg_count / 2) as "halfCount")
+    .interval("2011-06-01/2017-06-01")
+    .build()
+    
+val response = query.execute()
+val result: List[PostAggregationAnonymous] = response.list[PostAggregationAnonymous]    
+```
+
+## Aggregations
+
+todo
+
+## Post-aggregations
+
+todo
+
+## Extract functions
+
+todo

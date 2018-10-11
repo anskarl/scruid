@@ -63,8 +63,8 @@ private[dql] sealed trait QueryBuilderCommons {
     this
   }
 
-  def intervals(ints: String*): this.type = {
-    intervals ++= ints
+  def intervals(first: String, second: String, ints: String*): this.type = {
+    intervals ++= first :: second :: ints.toList
     this
   }
 

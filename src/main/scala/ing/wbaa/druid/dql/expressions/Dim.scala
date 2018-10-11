@@ -17,14 +17,16 @@
 
 package ing.wbaa.druid.dql.expressions
 
-import ing.wbaa.druid.DimensionOrderType
+import ing.wbaa.druid.{ DimensionOrder, DimensionOrderType, Direction, OrderByColumnSpec }
 import ing.wbaa.druid.definitions._
+import ing.wbaa.druid.dql.DSL
 import ing.wbaa.druid.dql.DSL.not
+import Dim.DimType
 
-case class Dim(name: String,
-               outputNameOpt: Option[String] = None,
-               outputTypeOpt: Option[String] = None,
-               extractionFnOpt: Option[ExtractionFn] = None)
+case class Dim private[dql] (name: String,
+                             outputNameOpt: Option[String] = None,
+                             outputTypeOpt: Option[String] = None,
+                             extractionFnOpt: Option[ExtractionFn] = None)
     extends Named[Dim] {
 
   override def alias(name: String): Dim = copy(outputNameOpt = Option(name))
@@ -37,8 +39,12 @@ case class Dim(name: String,
     copy(outputTypeOpt = Option(uppercase))
   }
 
-  def toFloat: Dim = cast("FLOAT")
-  def toLong: Dim  = cast("LONG")
+  def cast(outputType: Dim.DimType): Dim =
+    copy(outputTypeOpt = Option(outputType.toString))
+
+  def asFloat: Dim  = cast(DimType.FLOAT)
+  def asLong: Dim   = cast(DimType.LONG)
+  def asString: Dim = cast(DimType.STRING)
 
   def extract(fn: ExtractionFn): Dim =
     copy(extractionFnOpt = Option(fn))
@@ -146,7 +152,10 @@ case class Dim(name: String,
   def between(lower: String, upper: String): Bound =
     between(lower, upper, lowerStrict = false, upperStrict = false)
 
-  def interval(values: String*): FilteringExpression = new Interval(this, values.toList)
+  def interval(value: String): FilteringExpression = new Interval(this, value :: Nil)
+
+  def intervals(first: String, second: String, rest: String*): FilteringExpression =
+    new Interval(this, first :: second :: rest.toList)
 
   def contains(value: String, caseSensitive: Boolean = true): FilteringExpression =
     new Contains(this, value, caseSensitive)
@@ -156,8 +165,90 @@ case class Dim(name: String,
 
   def containsInsensitive(value: String): FilteringExpression =
     new InsensitiveContains(this, value)
+
+  // OrderByColumnSpec
+  def asc: OrderByColumnSpec =
+    OrderByColumnSpec(dimension = this.name, direction = Direction.ascending)
+
+  def desc: OrderByColumnSpec =
+    OrderByColumnSpec(dimension = this.name, direction = Direction.descending)
+
+  def asc(orderType: DimensionOrderType): OrderByColumnSpec =
+    OrderByColumnSpec(
+      dimension = this.name,
+      direction = Direction.ascending,
+      dimensionOrder = DimensionOrder(orderType)
+    )
+
+  def desc(orderType: DimensionOrderType): OrderByColumnSpec =
+    OrderByColumnSpec(
+      dimension = this.name,
+      direction = Direction.descending,
+      dimensionOrder = DimensionOrder(orderType)
+    )
+
+  // agg
+
+  def longSum: AggregationExpression   = DSL.longSum(this)
+  def longMax: AggregationExpression   = DSL.longMax(this)
+  def longFirst: AggregationExpression = DSL.longFirst(this)
+  def longLast: AggregationExpression  = DSL.longLast(this)
+
+  def doubleSum: AggregationExpression   = DSL.doubleSum(this)
+  def doubleMax: AggregationExpression   = DSL.doubleMax(this)
+  def doubleFirst: AggregationExpression = DSL.doubleFirst(this)
+  def doubleLast: AggregationExpression  = DSL.doubleLast(this)
+
+  def thetaSketch: AggregationExpression = DSL.thetaSketch(this)
+
+  def hyperUnique: AggregationExpression = DSL.hyperUnique(this)
+
+  def inFiltered(aggregator: AggregationExpression, values: String*): AggregationExpression =
+    DSL.inFiltered(this, aggregator, values: _*)
+
+  def selectorFiltered(aggregator: AggregationExpression): SelectorFilteredAgg =
+    DSL.selectorFiltered(this, aggregator)
+
+  def selectorFiltered(aggregator: AggregationExpression, value: String): SelectorFilteredAgg =
+    DSL.selectorFiltered(this, aggregator, value)
+
+  // post-agg
+
+  @inline
+  private def arithmeticAgg(value: Double, fn: String): ArithmeticPostAgg =
+    ArithmeticPostAgg(leftField = new FieldAccessPostAgg(this.name),
+                      rightField = new ConstantPostAgg(value),
+                      fn = fn)
+  @inline
+  private def arithmeticFieldAgg(right: Dim, fn: String): ArithmeticPostAgg =
+    ArithmeticPostAgg(leftField = new FieldAccessPostAgg(this.name),
+                      rightField = new FieldAccessPostAgg(right.name),
+                      fn = fn)
+
+  def +(v: Double): ArithmeticPostAgg        = arithmeticAgg(v, "+")
+  def -(v: Double): ArithmeticPostAgg        = arithmeticAgg(v, "-")
+  def *(v: Double): ArithmeticPostAgg        = arithmeticAgg(v, "*")
+  def /(v: Double): ArithmeticPostAgg        = arithmeticAgg(v, "/")
+  def quotient(v: Double): ArithmeticPostAgg = arithmeticAgg(v, "quotient")
+
+  def +(v: Dim): ArithmeticPostAgg        = arithmeticFieldAgg(v, "+")
+  def -(v: Dim): ArithmeticPostAgg        = arithmeticFieldAgg(v, "-")
+  def *(v: Dim): ArithmeticPostAgg        = arithmeticFieldAgg(v, "*")
+  def /(v: Dim): ArithmeticPostAgg        = arithmeticFieldAgg(v, "/")
+  def quotient(v: Dim): ArithmeticPostAgg = arithmeticFieldAgg(v, "quotient")
+
+  def hyperUniqueCardinality: HyperUniqueCardinalityPostAgg =
+    HyperUniqueCardinalityPostAgg(this.name)
 }
 
 object Dim {
   private final val ValidTypes = Set("STRING", "LONG", "FLOAT")
+
+  type DimType = DimType.Value
+
+  object DimType extends Enumeration {
+    val STRING: DimType = Value(0, "STRING")
+    val LONG: DimType   = Value(1, "LONG")
+    val FLOAT: DimType  = Value(2, "FLOAT")
+  }
 }
