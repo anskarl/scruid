@@ -153,6 +153,11 @@ case class JavascriptPostAggregation(
   override val `type` = PostAggregationType.Javascript
 }
 
+case class HyperUniqueCardinalityPostAggregation(name: String, fieldName: String)
+    extends PostAggregation {
+  override val `type` = PostAggregationType.HyperUniqueCardinality
+}
+
 object PostAggregation {
   implicit val encoder: Encoder[PostAggregation] = new Encoder[PostAggregation] {
     override def apply(pa: PostAggregation) =

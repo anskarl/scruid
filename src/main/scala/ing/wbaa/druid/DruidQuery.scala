@@ -63,9 +63,45 @@ case class GroupByQuery(
     granularity: Granularity = GranularityType.All,
     dataSource: String = DruidConfig.datasource,
     having: Option[Having] = None,
-    postAggregations: List[PostAggregation] = Nil
+    limitSpec: Option[LimitSpec] = None,
+    postAggregations: List[PostAggregation] = List()
 ) extends DruidQuery {
+
   val queryType = QueryType.GroupBy
+}
+
+case class LimitSpec(limit: Int, columns: Seq[OrderByColumnSpec]) {
+  val `type` = "default"
+}
+
+object LimitSpec {
+  implicit val encoder: Encoder[LimitSpec] = new Encoder[LimitSpec] {
+    override def apply(a: LimitSpec): Json = a.asJsonObject.add("type", a.`type`.asJson).asJson
+  }
+}
+
+case class OrderByColumnSpec(
+    dimension: String,
+    direction: Direction = Direction.ascending,
+    dimensionOrder: DimensionOrder = DimensionOrder()
+)
+case class DimensionOrder(`type`: DimensionOrderType = DimensionOrderType.lexicographic)
+
+sealed trait Direction extends Enum with LowerCaseEnumStringEncoder
+object Direction extends EnumCodec[Direction] {
+  case object ascending  extends Direction
+  case object descending extends Direction
+  val values: Set[Direction] = sealerate.values[Direction]
+}
+
+sealed trait DimensionOrderType extends Enum with LowerCaseEnumStringEncoder
+object DimensionOrderType extends EnumCodec[DimensionOrderType] {
+  case object lexicographic extends DimensionOrderType
+  case object alphanumeric  extends DimensionOrderType
+  case object strlen        extends DimensionOrderType
+  case object numeric       extends DimensionOrderType
+  val values: Set[DimensionOrderType] = sealerate.values[DimensionOrderType]
+
 }
 
 case class TimeSeriesQuery(
@@ -74,7 +110,8 @@ case class TimeSeriesQuery(
     filter: Option[Filter] = None,
     granularity: Granularity = GranularityType.Week,
     descending: String = "true",
-    dataSource: String = DruidConfig.datasource
+    dataSource: String = DruidConfig.datasource,
+    postAggregations: List[PostAggregation] = List()
 ) extends DruidQuery {
   val queryType = QueryType.Timeseries
 }
