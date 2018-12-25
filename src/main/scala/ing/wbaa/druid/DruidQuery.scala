@@ -42,7 +42,7 @@ sealed trait DruidQuery {
   val intervals: Iterable[String]
 
   def execute()(implicit config: DruidConfig = DruidConfig.DefaultConfig): Future[DruidResponse] =
-    DruidClient.doQuery(this)
+    config.client.doQuery(this)
 }
 
 object DruidQuery {
