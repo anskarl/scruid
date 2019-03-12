@@ -38,6 +38,8 @@ private[dql] sealed trait QueryBuilderCommons {
 
   protected var postAggregationExpr: List[PostAggregationExpression] = Nil
 
+  protected val ctxOpt = Option.empty[Ctx]
+
   /**
     * Specify the datasource to use, other than the default one in the configuration
     */
@@ -96,6 +98,73 @@ private[dql] sealed trait QueryBuilderCommons {
 
     filters = filter.asFilter :: filters
     this
+  }
+
+  def context(
+    timeout: Option[Long] = None,
+    priority: Option[Int] = None,
+    queryId: Option[String] = None,
+    useCache: Option[Boolean] = None,
+    populateCache: Option[Boolean] = None,
+    useResultLevelCache: Option[Boolean] = None,
+    populateResultLevelCache: Option[Boolean] = None,
+    bySegment: Option[Boolean] = None,
+    finalize: Option[Boolean] = None,
+    chunkPeriod: Option[String] = None,
+    maxScatterGatherBytes: Option[Long] = None,
+    maxQueuedBytes: Option[Long] = None,
+    serializeDateTimeAsLong: Option[Boolean] = None,
+    serializeDateTimeAsLongInner: Option[Boolean] = None,
+    skipEmptyBuckets: Option[Boolean] = None,
+    grandTotal: Option[Boolean] = None,
+    minTopNThreshold: Option[Int] = None,
+    maxMergingDictionarySize: Option[Long] = None,
+    maxOnDiskStorage: Option[Long] = None,
+    groupByIsSingleThreaded: Option[Boolean] = None,
+    bufferGrouperInitialBuckets: Option[Int] = None,
+    bufferGrouperMaxLoadFactor: Option[Double] = None,
+    forceHashAggregation: Option[Boolean] = None,
+    intermediateCombineDegree: Option[Int] = None,
+    numParallelCombineThreads: Option[Int] = None,
+    sortByDimsFirst: Option[Boolean] = None,
+    forceLimitPushDown: Option[Boolean] = None
+  ): Unit ={
+
+    ctxOpt match {
+      case Some(ctx) =>
+        ctx.copy()
+
+      case None =>
+        Ctx(
+          timeout,
+          priority,
+          queryId,
+          useCache,
+          populateCache,
+          useResultLevelCache,
+          populateResultLevelCache,
+          bySegment,
+          finalize,
+          chunkPeriod,
+          maxScatterGatherBytes,
+          maxQueuedBytes,
+          serializeDateTimeAsLong,
+          serializeDateTimeAsLongInner,
+          skipEmptyBuckets,
+          grandTotal,
+          minTopNThreshold,
+          maxMergingDictionarySize,
+          maxOnDiskStorage,
+          groupByIsSingleThreaded,
+          bufferGrouperInitialBuckets,
+          bufferGrouperMaxLoadFactor,
+          forceHashAggregation,
+          intermediateCombineDegree,
+          numParallelCombineThreads,
+          sortByDimsFirst,
+          forceLimitPushDown
+        )
+    }
   }
 
   protected def getFilters: Option[Filter] =

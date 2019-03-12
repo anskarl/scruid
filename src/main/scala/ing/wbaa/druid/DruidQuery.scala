@@ -102,7 +102,8 @@ case class GroupByQuery(
     granularity: Granularity = GranularityType.All,
     having: Option[Having] = None,
     limitSpec: Option[LimitSpec] = None,
-    postAggregations: Iterable[PostAggregation] = Iterable.empty
+    postAggregations: Iterable[PostAggregation] = Iterable.empty,
+    context: Option[GroupByContext] = None
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidQuery {
   val queryType          = QueryType.GroupBy
@@ -149,7 +150,8 @@ case class TimeSeriesQuery(
     filter: Option[Filter] = None,
     granularity: Granularity = GranularityType.Week,
     descending: String = "true",
-    postAggregations: Iterable[PostAggregation] = Iterable.empty
+    postAggregations: Iterable[PostAggregation] = Iterable.empty,
+    context: Option[TimeseriesContext] = None
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidQuery {
   val queryType          = QueryType.Timeseries
@@ -164,7 +166,8 @@ case class TopNQuery(
     intervals: Iterable[String],
     granularity: Granularity = GranularityType.All,
     filter: Option[Filter] = None,
-    postAggregations: Iterable[PostAggregation] = Iterable.empty
+    postAggregations: Iterable[PostAggregation] = Iterable.empty,
+    context: Option[TopNContext] = None
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidQuery {
   val queryType          = QueryType.TopN
