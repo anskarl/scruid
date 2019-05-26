@@ -18,7 +18,7 @@
 package ing.wbaa.druid
 
 import com.typesafe.config.ConfigFactory
-import ing.wbaa.druid.client.{ DruidClient, DruidHttpClient }
+import ing.wbaa.druid.client.{ DruidCachedHttpClient, DruidClient, DruidHttpClient }
 
 import scala.concurrent.duration.FiniteDuration
 import scala.language.implicitConversions
@@ -43,7 +43,8 @@ class DruidConfig(val host: String,
     new DruidConfig(host, port, secure, url, datasource, responseParsingTimeout)
 
   // todo
-  lazy val client: DruidClient = DruidHttpClient(this)
+  //lazy val client: DruidClient = DruidHttpClient(this)
+  lazy val client: DruidClient = DruidCachedHttpClient(this)
 }
 
 object DruidConfig {
