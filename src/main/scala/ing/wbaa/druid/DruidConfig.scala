@@ -18,10 +18,11 @@
 package ing.wbaa.druid
 
 import com.typesafe.config.ConfigFactory
-import ing.wbaa.druid.client.{ DruidCachedHttpClient, DruidClient, DruidHttpClient }
+import ing.wbaa.druid.client.{ DruidCachedHttpClient, DruidClient, DruidClientConstructor }
 
 import scala.concurrent.duration.FiniteDuration
 import scala.language.implicitConversions
+import scala.reflect.runtime.universe
 
 /*
  * Druid API Config Immutable
@@ -31,20 +32,31 @@ class DruidConfig(val host: String,
                   val secure: Boolean,
                   val url: String,
                   val datasource: String,
-                  val responseParsingTimeout: FiniteDuration) {
+                  val responseParsingTimeout: FiniteDuration,
+                  val clientBackend: String) {
   def copy(
       host: String = this.host,
       port: Int = this.port,
       secure: Boolean = this.secure,
       url: String = this.url,
       datasource: String = this.datasource,
-      responseParsingTimeout: FiniteDuration = this.responseParsingTimeout
+      responseParsingTimeout: FiniteDuration = this.responseParsingTimeout,
+      clientBackend: String = this.clientBackend
   ): DruidConfig =
-    new DruidConfig(host, port, secure, url, datasource, responseParsingTimeout)
+    new DruidConfig(host, port, secure, url, datasource, responseParsingTimeout, clientBackend)
 
   // todo
   //lazy val client: DruidClient = DruidHttpClient(this)
-  lazy val client: DruidClient = DruidCachedHttpClient(this)
+  lazy val client: DruidClient = loadClient(clientBackend)
+
+  private def loadClient(name: String): DruidClient = {
+    val runtimeMirror     = universe.runtimeMirror(getClass.getClassLoader)
+    val module            = runtimeMirror.staticModule(name)
+    val obj               = runtimeMirror.reflectModule(module)
+    val clientConstructor = obj.instance.asInstanceOf[DruidClientConstructor]
+    clientConstructor(this)
+
+  }
 }
 
 object DruidConfig {
@@ -66,6 +78,8 @@ object DruidConfig {
             url: String = druidConfig.getString("url"),
             datasource: String = druidConfig.getString("datasource"),
             responseParsingTimeout: FiniteDuration =
-              druidConfig.getDuration("response-parsing-timeout")): DruidConfig =
-    new DruidConfig(host, port, secure, url, datasource, responseParsingTimeout)
+              druidConfig.getDuration("response-parsing-timeout"),
+            clientBackend: String = druidConfig.getString("client-backend")): DruidConfig =
+    new DruidConfig(host, port, secure, url, datasource, responseParsingTimeout, clientBackend)
+
 }

@@ -38,6 +38,8 @@ class DruidCachedHttpClient private (connectionFlow: DruidCachedHttpClient.Query
     extends DruidClient
     with DruidResponseHandler {
 
+  logger.info("!!! DruidCachedHttpClient")
+
   private implicit val materializer = ActorMaterializer()
   private implicit val ec           = system.dispatcher
 
@@ -112,12 +114,12 @@ class DruidCachedHttpClient private (connectionFlow: DruidCachedHttpClient.Query
 
 }
 
-object DruidCachedHttpClient {
+object DruidCachedHttpClient extends DruidClientConstructor {
 
   type QueryConnectionFlowType =
     Flow[(HttpRequest, HttpRequest), (Try[HttpResponse], HttpRequest), Http.HostConnectionPool]
 
-  def apply(druidConfig: DruidConfig): DruidClient = {
+  override def apply(druidConfig: DruidConfig): DruidClient = {
     implicit val system = ActorSystem()
     val connectionFlow =
       createConnectionFlow(druidConfig.host, druidConfig.port, druidConfig.secure)

@@ -34,6 +34,8 @@ class DruidHttpClient private (connectionFlow: DruidHttpClient.ConnectionFlowTyp
 ) extends DruidClient
     with DruidResponseHandler {
 
+  logger.info("!!! DruidHttpClient")
+
   private implicit val materializer = ActorMaterializer()
   private implicit val ec           = system.dispatcher
 
@@ -94,11 +96,11 @@ class DruidHttpClient private (connectionFlow: DruidHttpClient.ConnectionFlowTyp
       }
 }
 
-object DruidHttpClient {
+object DruidHttpClient extends DruidClientConstructor {
 
   type ConnectionFlowType = Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]]
 
-  def apply(druidConfig: DruidConfig): DruidClient = {
+  override def apply(druidConfig: DruidConfig): DruidClient = {
     implicit val system = ActorSystem()
     val flow            = createConnectionFlow(druidConfig)
 

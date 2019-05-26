@@ -47,6 +47,12 @@ trait DruidClient extends CirceHttpSupport with JavaTimeDecoders {
 
 }
 
+trait DruidClientConstructor {
+
+  def apply(druidConfig: DruidConfig): DruidClient
+
+}
+
 trait DruidResponseHandler {
   self: DruidClient =>
 
