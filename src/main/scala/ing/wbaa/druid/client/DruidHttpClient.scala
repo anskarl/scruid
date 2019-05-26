@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package ing.wbaa.druid
+package ing.wbaa.druid.client
 
 import akka.NotUsed
 import akka.actor.ActorSystem
@@ -25,33 +25,14 @@ import akka.http.scaladsl.model.ContentTypes._
 import akka.http.scaladsl.model._
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
-import org.mdedetrich.akka.http.support.CirceHttpSupport
-import org.mdedetrich.akka.stream.support.CirceStreamSupport
-import io.circe.java8.time._
-import io.circe.parser.decode
-import org.slf4j.LoggerFactory
-import org.typelevel.jawn.AsyncParser
+import ing.wbaa.druid._
 
 import scala.concurrent.Future
 
-trait DruidClient extends CirceHttpSupport with JavaTimeDecoders {
-
-  def actorSystem: ActorSystem
-  def actorMaterializer: ActorMaterializer
-
-  def isHealthy(): Future[Boolean]
-  def doQuery(q: DruidQuery)(implicit druidConfig: DruidConfig): Future[DruidResponse]
-  def doQueryAsStream(q: DruidQuery)(
-      implicit druidConfig: DruidConfig
-  ): Source[DruidResult, NotUsed]
-
-}
-
 class DruidHttpClient private (connectionFlow: DruidHttpClient.ConnectionFlowType)(
     implicit system: ActorSystem
-) extends DruidClient {
-
-  private val logger = LoggerFactory.getLogger(getClass)
+) extends DruidClient
+    with DruidResponseHandler {
 
   private implicit val materializer = ActorMaterializer()
   private implicit val ec           = system.dispatcher
@@ -71,10 +52,13 @@ class DruidHttpClient private (connectionFlow: DruidHttpClient.ConnectionFlowTyp
   }
 
   override def doQuery(q: DruidQuery)(implicit druidConfig: DruidConfig): Future[DruidResponse] =
-    createHttpRequest(q)
-      .flatMap { request =>
-        executeRequest(request).flatMap(handleResponse(q.queryType))
+    Marshal(q)
+      .to[RequestEntity]
+      .map { entity =>
+        HttpRequest(HttpMethods.POST, uri = druidConfig.url)
+          .withEntity(entity.withContentType(`application/json`))
       }
+      .flatMap(executeRequest(q.queryType))
 
   override def doQueryAsStream(
       q: DruidQuery
@@ -84,41 +68,9 @@ class DruidHttpClient private (connectionFlow: DruidHttpClient.ConnectionFlowTyp
       .via(connectionFlow)
       .flatMapConcat(handleResponseAsStream)
 
-  private def handleResponse(
-      queryType: QueryType
-  )(response: HttpResponse)(implicit druidConfig: DruidConfig): Future[DruidResponse] = {
-    val body =
-      response.entity
-        .toStrict(druidConfig.responseParsingTimeout)
-        .map(_.data.decodeString("UTF-8"))
-    body.onComplete(b => logger.debug(s"Druid response: $b"))
-
-    if (response.status != StatusCodes.OK) {
-      body.flatMap { b =>
-        Future.failed(new Exception(s"Got unexpected response from Druid: $b"))
-      }
-    } else {
-      body
-        .map(decode[List[DruidResult]])
-        .map {
-          case Left(error)  => throw new Exception(s"Unable to parse json response: $error")
-          case Right(value) => DruidResponse(results = value, queryType = queryType)
-        }
-    }
-  }
-
-  private def handleResponseAsStream(
-      response: HttpResponse
-  ): Source[DruidResult, NotUsed] =
-    response.entity
-      .withoutSizeLimit()
-      .dataBytes
-      .via(CirceStreamSupport.decode[DruidResult](AsyncParser.UnwrapArray))
-      .mapMaterializedValue(_ => NotUsed)
-
   private def executeRequest(
-      request: HttpRequest
-  )(implicit druidConfig: DruidConfig): Future[HttpResponse] = {
+      queryType: QueryType
+  )(request: HttpRequest)(implicit druidConfig: DruidConfig): Future[DruidResponse] = {
     logger.debug(
       s"Executing api ${request.method} request to ${request.uri} with entity: ${request.entity}"
     )
@@ -127,6 +79,8 @@ class DruidHttpClient private (connectionFlow: DruidHttpClient.ConnectionFlowTyp
       .single(request)
       .via(connectionFlow)
       .runWith(Sink.head)
+      .flatMap(response => handleResponse(response, queryType, druidConfig.responseParsingTimeout))
+
   }
 
   private def createHttpRequest(
