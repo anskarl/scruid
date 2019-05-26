@@ -40,6 +40,8 @@ class DruidConfig(val host: String,
       responseParsingTimeout: FiniteDuration = this.responseParsingTimeout
   ): DruidConfig =
     new DruidConfig(host, port, secure, url, datasource, responseParsingTimeout)
+
+  lazy val client: DruidClient = DruidHttpClient(this)
 }
 
 object DruidConfig {

@@ -25,9 +25,12 @@ class DruidClientSpec extends WordSpec with Matchers with ScalaFutures {
   implicit override val patienceConfig =
     PatienceConfig(timeout = Span(5, Seconds), interval = Span(5, Millis))
 
+  val config = DruidConfig()
+  val client = config.client
+
   "DruidClient" should {
     "indicate that Druid is healthy" in {
-      whenReady(DruidClient.isHealthy()) { result =>
+      whenReady(client.isHealthy()) { result =>
         result shouldBe true
       }
     }

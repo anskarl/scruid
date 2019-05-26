@@ -34,15 +34,33 @@ import org.typelevel.jawn.AsyncParser
 
 import scala.concurrent.Future
 
-object DruidClient extends CirceHttpSupport with JavaTimeDecoders {
+trait DruidClient extends CirceHttpSupport with JavaTimeDecoders {
+
+  def actorSystem: ActorSystem
+  def actorMaterializer: ActorMaterializer
+
+  def isHealthy(): Future[Boolean]
+  def doQuery(q: DruidQuery)(implicit druidConfig: DruidConfig): Future[DruidResponse]
+  def doQueryAsStream(q: DruidQuery)(
+      implicit druidConfig: DruidConfig
+  ): Source[DruidResult, NotUsed]
+
+}
+
+class DruidHttpClient private (connectionFlow: DruidHttpClient.ConnectionFlowType)(
+    implicit system: ActorSystem
+) extends DruidClient {
+
   private val logger = LoggerFactory.getLogger(getClass)
 
-  implicit val system       = ActorSystem()
-  implicit val materializer = ActorMaterializer()
+  private implicit val materializer = ActorMaterializer()
+  private implicit val ec           = system.dispatcher
 
-  implicit val ec = system.dispatcher
+  override def actorSystem: ActorSystem = system
 
-  def isHealthy(): Future[Boolean] = {
+  override def actorMaterializer: ActorMaterializer = materializer
+
+  override def isHealthy(): Future[Boolean] = {
     val request = HttpRequest(HttpMethods.GET, uri = DruidConfig.HealthEndpoint)
     Source
       .single(request)
@@ -52,12 +70,19 @@ object DruidClient extends CirceHttpSupport with JavaTimeDecoders {
       .recover { case _ => false }
   }
 
-  def connectionFlow(
-      implicit druidConfig: DruidConfig
-  ): Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]] =
-    if (druidConfig.secure)
-      Http().outgoingConnectionHttps(host = druidConfig.host, port = druidConfig.port)
-    else Http().outgoingConnection(host = druidConfig.host, port = druidConfig.port)
+  override def doQuery(q: DruidQuery)(implicit druidConfig: DruidConfig): Future[DruidResponse] =
+    createHttpRequest(q)
+      .flatMap { request =>
+        executeRequest(request).flatMap(handleResponse(q.queryType))
+      }
+
+  override def doQueryAsStream(
+      q: DruidQuery
+  )(implicit druidConfig: DruidConfig): Source[DruidResult, NotUsed] =
+    Source
+      .fromFuture(createHttpRequest(q))
+      .via(connectionFlow)
+      .flatMapConcat(handleResponseAsStream)
 
   private def handleResponse(
       queryType: QueryType
@@ -113,19 +138,24 @@ object DruidClient extends CirceHttpSupport with JavaTimeDecoders {
         HttpRequest(HttpMethods.POST, uri = druidConfig.url)
           .withEntity(entity.withContentType(`application/json`))
       }
+}
 
-  def doQuery(q: DruidQuery)(implicit druidConfig: DruidConfig): Future[DruidResponse] =
-    createHttpRequest(q)
-      .flatMap { request =>
-        executeRequest(request).flatMap(handleResponse(q.queryType))
-      }
+object DruidHttpClient {
 
-  def doQueryAsStream(
-      q: DruidQuery
-  )(implicit druidConfig: DruidConfig): Source[DruidResult, NotUsed] =
-    Source
-      .fromFuture(createHttpRequest(q))
-      .via(connectionFlow)
-      .flatMapConcat(handleResponseAsStream)
+  type ConnectionFlowType = Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]]
+
+  def apply(druidConfig: DruidConfig): DruidClient = {
+    implicit val system = ActorSystem()
+    val flow            = createConnectionFlow(druidConfig)
+
+    new DruidHttpClient(flow)
+  }
+
+  private def createConnectionFlow(
+      druidConfig: DruidConfig
+  )(implicit actorSystem: ActorSystem): ConnectionFlowType =
+    if (druidConfig.secure)
+      Http().outgoingConnectionHttps(host = druidConfig.host, port = druidConfig.port)
+    else Http().outgoingConnection(host = druidConfig.host, port = druidConfig.port)
 
 }
