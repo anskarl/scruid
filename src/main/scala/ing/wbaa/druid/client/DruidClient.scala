@@ -24,6 +24,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
 import ing.wbaa.druid._
 import io.circe.java8.time._
+
 import org.mdedetrich.akka.http.support.CirceHttpSupport
 import org.slf4j.LoggerFactory
 import io.circe.parser.decode
@@ -33,6 +34,7 @@ import org.typelevel.jawn.AsyncParser
 import scala.concurrent.{ ExecutionContextExecutor, Future }
 import scala.concurrent.duration.FiniteDuration
 
+//todo CirceHttpSupport or import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 trait DruidClient extends CirceHttpSupport with JavaTimeDecoders {
 
   protected val logger = LoggerFactory.getLogger(getClass)
@@ -48,6 +50,8 @@ trait DruidClient extends CirceHttpSupport with JavaTimeDecoders {
 }
 
 trait DruidClientConstructor {
+
+  val supportsMultipleBrokers: Boolean
 
   def apply(druidConfig: DruidConfig): DruidClient
 

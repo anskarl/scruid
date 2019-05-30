@@ -25,25 +25,27 @@ import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model.ContentTypes._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.settings.ConnectionPoolSettings
-import akka.stream.{ ActorMaterializer, OverflowStrategy, QueueOfferResult }
+import akka.stream.{ ActorMaterializer, FlowShape, OverflowStrategy, QueueOfferResult }
 import akka.stream.scaladsl._
-import ing.wbaa.druid.{ DruidConfig, DruidQuery, DruidResponse, DruidResult, QueryHost }
 
+import ing.wbaa.druid.{ DruidConfig, DruidQuery, DruidResponse, DruidResult, QueryHost }
 import scala.concurrent.duration._
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ ExecutionContextExecutor, Future, Promise }
 import scala.util.{ Failure, Success, Try }
 
-class DruidCachedHttpClient private (connectionFlow: DruidCachedHttpClient.QueryConnectionFlowType,
-                                     responseParsingTimeout: FiniteDuration,
-                                     url: String)(implicit system: ActorSystem)
+class DruidLoadBalancerHttpClient private (
+    connectionFlow: DruidLoadBalancerHttpClient.QueryConnectionFlowType,
+    responseParsingTimeout: FiniteDuration,
+    url: String
+)(implicit val system: ActorSystem)
     extends DruidClient
     with DruidResponseHandler {
 
-  logger.info("!!! DruidCachedHttpClient")
+  logger.info("!!! DruidLoadBalancerHttpClient")
 
-  private implicit val materializer         = ActorMaterializer()
-  private implicit val ec                   = system.dispatcher
-  private implicit val scheduler: Scheduler = system.scheduler
+  private implicit val materializer: ActorMaterializer = ActorMaterializer()
+  private implicit val ec: ExecutionContextExecutor    = system.dispatcher
+  private implicit val scheduler: Scheduler            = system.scheduler
 
   private val queue: SourceQueueWithComplete[(HttpRequest, Promise[HttpResponse])] =
     Source
@@ -84,7 +86,10 @@ class DruidCachedHttpClient private (connectionFlow: DruidCachedHttpClient.Query
         val request = HttpRequest(HttpMethods.POST, url)
           .withEntity(entity.withContentType(`application/json`))
 
-        executeRequest(q)(request)
+        akka.pattern.retry(() => executeRequest(q)(request),
+                           druidConfig.hosts.size * 10,
+                           10.milliseconds) // todo
+
       }
 
   override def doQueryAsStream(
@@ -137,49 +142,73 @@ class DruidCachedHttpClient private (connectionFlow: DruidCachedHttpClient.Query
         HttpRequest(HttpMethods.POST, uri = druidConfig.url)
           .withEntity(entity.withContentType(`application/json`))
       }
-
 }
 
-object DruidCachedHttpClient extends DruidClientConstructor {
+object DruidLoadBalancerHttpClient extends DruidClientConstructor {
 
   type QueryConnectionFlowType =
-    Flow[(HttpRequest, Promise[HttpResponse]),
-         (Try[HttpResponse], Promise[HttpResponse]),
-         Http.HostConnectionPool]
+    Flow[(HttpRequest, Promise[HttpResponse]), (Try[HttpResponse], Promise[HttpResponse]), NotUsed]
 
-  override val supportsMultipleBrokers = false
+  override val supportsMultipleBrokers: Boolean = true
 
   override def apply(druidConfig: DruidConfig): DruidClient = {
     implicit val system = druidConfig.system
+    val connectionFlow  = createConnectionFlow(druidConfig.hosts, druidConfig.secure)
 
-    val QueryHost(host, port) = druidConfig.hosts.head
-
-    val connectionFlow =
-      createConnectionFlow(host, port, druidConfig.secure)
-
-    new DruidCachedHttpClient(connectionFlow, druidConfig.responseParsingTimeout, druidConfig.url)
+    new DruidLoadBalancerHttpClient(connectionFlow,
+                                    druidConfig.responseParsingTimeout,
+                                    druidConfig.url)
   }
 
-  private def createConnectionFlow(host: String, port: Int, secureConnection: Boolean)(
+  private def balancer[In, Out](workers: Seq[Flow[In, Out, Any]]): Flow[In, Out, NotUsed] = {
+    import GraphDSL.Implicits._
+
+    Flow.fromGraph(GraphDSL.create() { implicit b ⇒
+      val balancer = b.add(Balance[In](outputPorts = workers.size, waitForAllDownstreams = false))
+      val merge    = b.add(Merge[Out](workers.size))
+
+      workers.foreach { worker ⇒
+        balancer ~> worker ~> merge
+      }
+
+      FlowShape(balancer.in, merge.out)
+    })
+  }
+
+  private def createConnectionFlow(hosts: Seq[QueryHost], secureConnection: Boolean)(
       implicit system: ActorSystem
   ): QueryConnectionFlowType = {
+
     val settings: ConnectionPoolSettings = ConnectionPoolSettings(system)
     val log: LoggingAdapter              = system.log
 
-    if (secureConnection) {
-      Http().cachedHostConnectionPoolHttps[Promise[HttpResponse]](
-        host = host,
-        port = port,
-        settings = settings,
-        log = log
-      )
-    } else {
-      Http().cachedHostConnectionPool[Promise[HttpResponse]](
-        host = host,
-        port = port,
-        settings = settings,
-        log = log
-      )
+    val workers: Seq[Flow[(HttpRequest, Promise[HttpResponse]),
+                          (Try[HttpResponse], Promise[HttpResponse]),
+                          NotUsed]] = hosts.map { queryHost ⇒
+      Flow[(HttpRequest, Promise[HttpResponse])]
+        .log("scruid-load-balancer", _ => s"Sending query to ${queryHost.host}:${queryHost.port}")
+        .via {
+
+          if (secureConnection) {
+            Http().cachedHostConnectionPoolHttps[Promise[HttpResponse]](
+              host = queryHost.host,
+              port = queryHost.port,
+              settings = settings,
+              log = log
+            )
+          } else {
+            Http().cachedHostConnectionPool[Promise[HttpResponse]](
+              host = queryHost.host,
+              port = queryHost.port,
+              settings = settings,
+              log = log
+            )
+          }
+        }
     }
+
+    balancer[(HttpRequest, Promise[HttpResponse]), (Try[HttpResponse], Promise[HttpResponse])](
+      workers
+    )
   }
 }

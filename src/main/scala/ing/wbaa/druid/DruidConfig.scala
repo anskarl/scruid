@@ -17,9 +17,13 @@
 
 package ing.wbaa.druid
 
-import com.typesafe.config.ConfigFactory
-import ing.wbaa.druid.client.{ DruidCachedHttpClient, DruidClient, DruidClientConstructor }
+import java.net.URI
 
+import akka.actor.ActorSystem
+import com.typesafe.config.{ ConfigException, ConfigFactory }
+import ing.wbaa.druid.client.{ DruidClient, DruidClientConstructor }
+
+import scala.annotation.switch
 import scala.concurrent.duration.FiniteDuration
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe
@@ -27,26 +31,23 @@ import scala.reflect.runtime.universe
 /*
  * Druid API Config Immutable
  */
-class DruidConfig(val host: String,
-                  val port: Int,
+class DruidConfig(val hosts: Seq[QueryHost],
                   val secure: Boolean,
                   val url: String,
                   val datasource: String,
                   val responseParsingTimeout: FiniteDuration,
-                  val clientBackend: String) {
+                  val clientBackend: String,
+                  val system: ActorSystem) {
   def copy(
-      host: String = this.host,
-      port: Int = this.port,
+      hosts: Seq[QueryHost] = this.hosts,
       secure: Boolean = this.secure,
       url: String = this.url,
       datasource: String = this.datasource,
       responseParsingTimeout: FiniteDuration = this.responseParsingTimeout,
       clientBackend: String = this.clientBackend
   ): DruidConfig =
-    new DruidConfig(host, port, secure, url, datasource, responseParsingTimeout, clientBackend)
+    new DruidConfig(hosts, secure, url, datasource, responseParsingTimeout, clientBackend, system)
 
-  // todo
-  //lazy val client: DruidClient = DruidHttpClient(this)
   lazy val client: DruidClient = loadClient(clientBackend)
 
   private def loadClient(name: String): DruidClient = {
@@ -59,7 +60,10 @@ class DruidConfig(val host: String,
   }
 }
 
+case class QueryHost(host: String, port: Int)
+
 object DruidConfig {
+  private final val URISchemeSepPattern = "://".r
 
   private val config = ConfigFactory.load()
 
@@ -72,14 +76,64 @@ object DruidConfig {
 
   implicit val DefaultConfig: DruidConfig = apply()
 
-  def apply(host: String = druidConfig.getString("host"),
-            port: Int = druidConfig.getInt("port"),
+  def apply(hosts: Seq[QueryHost] = extractHostsFromConfig,
             secure: Boolean = druidConfig.getBoolean("secure"),
             url: String = druidConfig.getString("url"),
             datasource: String = druidConfig.getString("datasource"),
             responseParsingTimeout: FiniteDuration =
               druidConfig.getDuration("response-parsing-timeout"),
-            clientBackend: String = druidConfig.getString("client-backend")): DruidConfig =
-    new DruidConfig(host, port, secure, url, datasource, responseParsingTimeout, clientBackend)
+            clientBackend: String = druidConfig.getString("client-backend"),
+            system: ActorSystem = ActorSystem("scruid-actor-system")): DruidConfig =
+    new DruidConfig(hosts, secure, url, datasource, responseParsingTimeout, clientBackend, system)
+
+  /**
+    * Extract query node hosts with their ports from the specified configuration
+    *
+    * @throws ConfigException.Generic when the 'hosts' parameter in configuration is empty, null or invalid
+    *
+    * @return a sequence of query node hosts
+    */
+  private def extractHostsFromConfig: Seq[QueryHost] = {
+    val hosts = druidConfig.getString("hosts").trim
+
+    if (hosts.isEmpty)
+      throw new ConfigException.Generic("Empty configuration parameter 'hosts'")
+
+    val hostWithPortsValues = hosts.split(',').map(_.trim)
+
+    if (hostWithPortsValues.exists(_.isEmpty))
+      throw new ConfigException.Generic("Empty host:port value in configuration parameter 'hosts'")
+
+    hostWithPortsValues.map { hostPortStr =>
+      val countSchemeSeparators = URISchemeSepPattern.findAllIn(hostPortStr).size
+
+      // `hostPortStr` should contain at most one definition of a URI scheme
+      val uri = (countSchemeSeparators: @switch) match {
+        case 0 =>
+          new URI("druid://" + hostPortStr) // adding 'druid://' scheme to avoid URISyntaxException
+        case 1 => new URI(hostPortStr)
+        case _ =>
+          throw new ConfigException.Generic(
+            s"Invalid host port definition in configuration parameter 'hosts', failed to parse '$hostPortStr'"
+          )
+      }
+
+      // Get the host address (ip v4 or v6) or hostname
+      val host = Option(uri.getHost).getOrElse {
+        throw new ConfigException.Generic(
+          s"Invalid host port definition in configuration parameter 'hosts', failed to read host address or name from '$hostPortStr'"
+        )
+      }
+
+      // Get the port number
+      val port = Option(uri.getPort).find(_ > 0).getOrElse {
+        throw new ConfigException.Generic(
+          s"Invalid host port definition in configuration parameter 'hosts', failed to read port number from '$hostPortStr'"
+        )
+      }
+
+      QueryHost(host, port)
+    }
+  }
 
 }

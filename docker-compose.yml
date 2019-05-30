@@ -1,0 +1,32 @@
+version: "3.7"
+
+services:
+
+  scruid_druid:
+    image: mmartina/docker-druid:latest
+    container_name: scruid_druid
+    ports:
+      - "8081:8081"
+      - "8082:8082"
+      - "8083:8082"
+      - "8084:8080"
+
+  wait_for_druid:
+    image: dadarek/wait-for-dependencies:latest
+    container_name: wait_for_druid
+    depends_on:
+      - scruid_druid
+    command: scruid_druid:8081 scruid_druid:8082
+
+  chaos_proxy_for_druid:
+    image: andymacdonald/clusterf-chaos-proxy:latest
+    container_name: chaos_proxy_for_druid
+    depends_on:
+      - scruid_druid
+    links:
+      - scruid_druid
+    environment:
+      JAVA_OPTS: "-Dserver.port=8080 -Dchaos.strategy=RANDOM_HAVOC -Dchaos.strategy.delayResponse.random.maxSeconds=2 -Ddestination.hostProtocolAndPort=http://scruid_druid:8082"
+    ports:
+      - "8085:8080"
+      - "8086:8080"

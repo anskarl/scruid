@@ -18,6 +18,7 @@
 package ing.wbaa.druid
 
 import akka.stream.scaladsl.Sink
+import ing.wbaa.druid.client.DruidHttpClient
 import ing.wbaa.druid.definitions.ArithmeticFunctions._
 import ing.wbaa.druid.definitions.FilterOperators._
 import ing.wbaa.druid.definitions._
@@ -32,7 +33,7 @@ class DruidQuerySpec extends WordSpec with Matchers with ScalaFutures {
   implicit override val patienceConfig =
     PatienceConfig(timeout = Span(20, Seconds), interval = Span(5, Millis))
   private val totalNumberOfEntries = 39244
-  implicit val config              = DruidConfig()
+  implicit val config              = DruidConfig(clientBackend = classOf[DruidHttpClient].getName)
   implicit val mat                 = config.client.actorMaterializer
 
   case class TimeseriesCount(count: Int)

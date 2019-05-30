@@ -100,8 +100,10 @@ object DruidHttpClient extends DruidClientConstructor {
 
   type ConnectionFlowType = Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]]
 
+  override val supportsMultipleBrokers = false
+
   override def apply(druidConfig: DruidConfig): DruidClient = {
-    implicit val system = ActorSystem()
+    implicit val system = druidConfig.system
     val flow            = createConnectionFlow(druidConfig)
 
     new DruidHttpClient(flow)
@@ -109,9 +111,11 @@ object DruidHttpClient extends DruidClientConstructor {
 
   private def createConnectionFlow(
       druidConfig: DruidConfig
-  )(implicit actorSystem: ActorSystem): ConnectionFlowType =
-    if (druidConfig.secure)
-      Http().outgoingConnectionHttps(host = druidConfig.host, port = druidConfig.port)
-    else Http().outgoingConnection(host = druidConfig.host, port = druidConfig.port)
+  )(implicit actorSystem: ActorSystem): ConnectionFlowType = {
+    val QueryHost(host, port) = druidConfig.hosts.head
+
+    if (druidConfig.secure) Http().outgoingConnectionHttps(host, port)
+    else Http().outgoingConnection(host, port)
+  }
 
 }

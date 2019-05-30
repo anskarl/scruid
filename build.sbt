@@ -52,7 +52,8 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
     }
     .toList
     .flatten,
-  publishArtifact in Test := false
+  publishArtifact in Test := false,
+  Test / parallelExecution := false
 ) ++ Seq(Compile, Test).flatMap(c => scalacOptions in (c, console) --= unusedWarnings)
 
 val circeVersion = "0.11.1"
@@ -76,10 +77,9 @@ lazy val root = (project in file("."))
       "org.mdedetrich"    %% "akka-http-circe"   % mdedetrichVersion,
       "com.typesafe.akka" %% "akka-http"         % "10.1.5",
       "ca.mrvisser"       %% "sealerate"         % "0.0.5",
-      "de.heikoseeberger" %% "akka-http-circe"   % "1.25.2",
-      "ch.qos.logback"    % "logback-classic"    % "1.2.3",
-      "org.scalactic"     %% "scalactic"         % "3.0.5",
-      "org.scalatest"     %% "scalatest"         % "3.0.5" % "test"
+      "ch.qos.logback" % "logback-classic" % "1.2.3",
+      "org.scalactic"  %% "scalactic"      % "3.0.5",
+      "org.scalatest"  %% "scalatest"      % "3.0.5" % "test"
     ),
     resolvers += Resolver.sonatypeRepo("releases")
   )

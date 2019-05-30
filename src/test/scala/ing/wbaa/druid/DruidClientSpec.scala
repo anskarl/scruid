@@ -17,6 +17,7 @@
 
 package ing.wbaa.druid
 
+import ing.wbaa.druid.client.DruidHttpClient
 import org.scalatest._
 import org.scalatest.concurrent._
 import org.scalatest.time._
@@ -25,8 +26,8 @@ class DruidClientSpec extends WordSpec with Matchers with ScalaFutures {
   implicit override val patienceConfig =
     PatienceConfig(timeout = Span(5, Seconds), interval = Span(5, Millis))
 
-  val config = DruidConfig()
-  val client = config.client
+  implicit val config = DruidConfig(clientBackend = classOf[DruidHttpClient].getName)
+  val client          = config.client
 
   "DruidClient" should {
     "indicate that Druid is healthy" in {
