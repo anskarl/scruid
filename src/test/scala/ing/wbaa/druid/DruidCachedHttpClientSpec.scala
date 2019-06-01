@@ -17,7 +17,7 @@
 
 package ing.wbaa.druid
 
-import ing.wbaa.druid.client.{ DruidCachedHttpClient, DruidHttpClient }
+import ing.wbaa.druid.client.{ DruidAdvancedHttpClient, DruidCachedHttpClient, DruidHttpClient }
 import ing.wbaa.druid.definitions._
 import io.circe.generic.auto._
 import org.scalatest._
@@ -63,7 +63,7 @@ class DruidCachedHttpClientSpec extends WordSpec with Matchers with ScalaFutures
     }
 
     s"execute all ${numberOfConcurrentQueries} concurrent queries when using '${classOf[DruidCachedHttpClient].getName}'" in {
-      implicit val config = DruidConfig(clientBackend = classOf[DruidCachedHttpClient].getName)
+      implicit val config = DruidConfig(clientBackend = classOf[DruidAdvancedHttpClient].getName)
 
       implicit val ec = query.config.system.dispatcher
 

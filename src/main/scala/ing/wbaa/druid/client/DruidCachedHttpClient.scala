@@ -39,8 +39,6 @@ class DruidCachedHttpClient private (connectionFlow: DruidCachedHttpClient.Query
     extends DruidClient
     with DruidResponseHandler {
 
-  logger.info("!!! DruidCachedHttpClient")
-
   private implicit val materializer         = ActorMaterializer()
   private implicit val ec                   = system.dispatcher
   private implicit val scheduler: Scheduler = system.scheduler

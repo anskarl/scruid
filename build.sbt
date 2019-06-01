@@ -77,9 +77,9 @@ lazy val root = (project in file("."))
       "org.mdedetrich"    %% "akka-http-circe"   % mdedetrichVersion,
       "com.typesafe.akka" %% "akka-http"         % "10.1.5",
       "ca.mrvisser"       %% "sealerate"         % "0.0.5",
-      "ch.qos.logback" % "logback-classic" % "1.2.3",
-      "org.scalactic"  %% "scalactic"      % "3.0.5",
-      "org.scalatest"  %% "scalatest"      % "3.0.5" % "test"
+      "ch.qos.logback"    % "logback-classic"    % "1.2.3",
+      "org.scalactic"     %% "scalactic"         % "3.0.5",
+      "org.scalatest"     %% "scalatest"         % "3.0.5" % "test"
     ),
     resolvers += Resolver.sonatypeRepo("releases")
   )

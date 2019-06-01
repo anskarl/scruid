@@ -27,21 +27,25 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.stream.{ ActorMaterializer, FlowShape, OverflowStrategy, QueueOfferResult }
 import akka.stream.scaladsl._
-
+import akka.pattern.retry
+import com.typesafe.config.{ Config, ConfigException, ConfigFactory }
 import ing.wbaa.druid.{ DruidConfig, DruidQuery, DruidResponse, DruidResult, QueryHost }
+
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContextExecutor, Future, Promise }
 import scala.util.{ Failure, Success, Try }
 
-class DruidLoadBalancerHttpClient private (
-    connectionFlow: DruidLoadBalancerHttpClient.QueryConnectionFlowType,
+class DruidAdvancedHttpClient private (
+    connectionFlow: DruidAdvancedHttpClient.QueryConnectionFlowType,
     responseParsingTimeout: FiniteDuration,
-    url: String
+    url: String,
+    bufferSize: Int,
+    bufferOverflowStrategy: OverflowStrategy,
+    requestRetriesPerHost: Int,
+    requestRetryDelay: FiniteDuration
 )(implicit val system: ActorSystem)
     extends DruidClient
     with DruidResponseHandler {
-
-  logger.info("!!! DruidLoadBalancerHttpClient")
 
   private implicit val materializer: ActorMaterializer = ActorMaterializer()
   private implicit val ec: ExecutionContextExecutor    = system.dispatcher
@@ -49,8 +53,7 @@ class DruidLoadBalancerHttpClient private (
 
   private val queue: SourceQueueWithComplete[(HttpRequest, Promise[HttpResponse])] =
     Source
-      .queue[(HttpRequest, Promise[HttpResponse])](bufferSize = 32768, // Int.MaxValue
-                                                   overflowStrategy = OverflowStrategy.backpressure)
+      .queue[(HttpRequest, Promise[HttpResponse])](bufferSize, bufferOverflowStrategy)
       .named("druid-client-queue")
       .via(connectionFlow)
       .toMat(Sink.foreach {
@@ -86,9 +89,11 @@ class DruidLoadBalancerHttpClient private (
         val request = HttpRequest(HttpMethods.POST, url)
           .withEntity(entity.withContentType(`application/json`))
 
-        akka.pattern.retry(() => executeRequest(q)(request),
-                           druidConfig.hosts.size * 10,
-                           10.milliseconds) // todo
+        retry(
+          () => executeRequest(q)(request),
+          druidConfig.hosts.size * requestRetriesPerHost,
+          requestRetryDelay
+        )
 
       }
 
@@ -144,20 +149,70 @@ class DruidLoadBalancerHttpClient private (
       }
 }
 
-object DruidLoadBalancerHttpClient extends DruidClientConstructor {
+object DruidAdvancedHttpClient extends DruidClientConstructor {
 
-  type QueryConnectionFlowType =
-    Flow[(HttpRequest, Promise[HttpResponse]), (Try[HttpResponse], Promise[HttpResponse]), NotUsed]
+  type QueryConnectionIn  = (HttpRequest, Promise[HttpResponse])
+  type QueryConnectionOut = (Try[HttpResponse], Promise[HttpResponse])
+
+  type QueryConnectionFlowType = Flow[QueryConnectionIn, QueryConnectionOut, NotUsed]
+
+  final val ParamDruidAdvancedHttpClient = "druid-advanced-http-client"
+  final val ParamConnectionPoolSettings  = "host-connection-pool"
+  final val ParamBufferSize              = "buffer-size"
+  final val ParamBufferOverflowStrategy  = "buffer-overflow-strategy"
+  final val ParamRequestRetries          = "request-retries-per-host"
+  final val ParamRequestRetryDelay       = "retry-delay"
 
   override val supportsMultipleBrokers: Boolean = true
 
   override def apply(druidConfig: DruidConfig): DruidClient = {
     implicit val system = druidConfig.system
-    val connectionFlow  = createConnectionFlow(druidConfig.hosts, druidConfig.secure)
+    val clientConfig    = druidConfig.clientConfig.getConfig(ParamDruidAdvancedHttpClient)
 
-    new DruidLoadBalancerHttpClient(connectionFlow,
-                                    druidConfig.responseParsingTimeout,
-                                    druidConfig.url)
+    val akkaHostConnectionPoolConf = ConfigFactory.load("akka.http.host-connection-pool")
+
+    val poolConfig = Try(clientConfig.getConfig(ParamConnectionPoolSettings))
+      .map { conf =>
+        conf
+          .atPath("akka.http.host-connection-pool")
+          .withFallback(akkaHostConnectionPoolConf)
+      }
+      .getOrElse(akkaHostConnectionPoolConf)
+
+    val connectionFlow = createConnectionFlow(druidConfig.hosts, druidConfig.secure, poolConfig)
+
+    val bufferSize = Option(clientConfig.getInt(ParamBufferSize)).getOrElse(32768)
+
+    val bufferOverflowStrategy =
+      Option(clientConfig.getString(ParamBufferOverflowStrategy))
+        .map {
+          case "DropHead"     => OverflowStrategy.dropHead
+          case "DropTail"     => OverflowStrategy.dropTail
+          case "DropBuffer"   => OverflowStrategy.dropBuffer
+          case "DropNew"      => OverflowStrategy.dropNew
+          case "Fail"         => OverflowStrategy.fail
+          case "Backpressure" => OverflowStrategy.backpressure
+          case name =>
+            throw new ConfigException.Generic(
+              s"Unknown overflow strategy ($name) for client config parameter '$ParamBufferOverflowStrategy'"
+            )
+        }
+        .getOrElse(OverflowStrategy.backpressure)
+
+    val requestRetries = Option(clientConfig.getInt(ParamRequestRetries)).getOrElse(10)
+
+    val requestRetryDelay =
+      Option(clientConfig.getDuration(ParamRequestRetryDelay))
+        .map(_.toMillis.milliseconds)
+        .getOrElse(10.milliseconds)
+
+    new DruidAdvancedHttpClient(connectionFlow,
+                                druidConfig.responseParsingTimeout,
+                                druidConfig.url,
+                                bufferSize,
+                                bufferOverflowStrategy,
+                                requestRetries,
+                                requestRetryDelay)
   }
 
   private def balancer[In, Out](workers: Seq[Flow[In, Out, Any]]): Flow[In, Out, NotUsed] = {
@@ -175,20 +230,21 @@ object DruidLoadBalancerHttpClient extends DruidClientConstructor {
     })
   }
 
-  private def createConnectionFlow(hosts: Seq[QueryHost], secureConnection: Boolean)(
+  private def createConnectionFlow(hosts: Seq[QueryHost],
+                                   secureConnection: Boolean,
+                                   connectionPoolConfig: Config)(
       implicit system: ActorSystem
   ): QueryConnectionFlowType = {
 
-    val settings: ConnectionPoolSettings = ConnectionPoolSettings(system)
+    require(hosts.nonEmpty)
+
+    val settings: ConnectionPoolSettings = ConnectionPoolSettings(connectionPoolConfig)
     val log: LoggingAdapter              = system.log
 
-    val workers: Seq[Flow[(HttpRequest, Promise[HttpResponse]),
-                          (Try[HttpResponse], Promise[HttpResponse]),
-                          NotUsed]] = hosts.map { queryHost ⇒
-      Flow[(HttpRequest, Promise[HttpResponse])]
+    val workers: Seq[QueryConnectionFlowType] = hosts.map { queryHost ⇒
+      Flow[QueryConnectionIn]
         .log("scruid-load-balancer", _ => s"Sending query to ${queryHost.host}:${queryHost.port}")
         .via {
-
           if (secureConnection) {
             Http().cachedHostConnectionPoolHttps[Promise[HttpResponse]](
               host = queryHost.host,
@@ -207,8 +263,7 @@ object DruidLoadBalancerHttpClient extends DruidClientConstructor {
         }
     }
 
-    balancer[(HttpRequest, Promise[HttpResponse]), (Try[HttpResponse], Promise[HttpResponse])](
-      workers
-    )
+    if (hosts.size > 1) balancer[QueryConnectionIn, QueryConnectionOut](workers) else workers.head
+
   }
 }

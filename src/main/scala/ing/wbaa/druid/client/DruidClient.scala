@@ -34,10 +34,11 @@ import org.typelevel.jawn.AsyncParser
 import scala.concurrent.{ ExecutionContextExecutor, Future }
 import scala.concurrent.duration.FiniteDuration
 
-//todo CirceHttpSupport or import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 trait DruidClient extends CirceHttpSupport with JavaTimeDecoders {
 
   protected val logger = LoggerFactory.getLogger(getClass)
+
+  logger.info(s"Using '${this.getClass.getName}' as http client")
 
   def actorSystem: ActorSystem
   def actorMaterializer: ActorMaterializer

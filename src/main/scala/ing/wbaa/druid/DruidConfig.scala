@@ -20,7 +20,7 @@ package ing.wbaa.druid
 import java.net.URI
 
 import akka.actor.ActorSystem
-import com.typesafe.config.{ ConfigException, ConfigFactory }
+import com.typesafe.config.{ Config, ConfigException, ConfigFactory }
 import ing.wbaa.druid.client.{ DruidClient, DruidClientConstructor }
 
 import scala.annotation.switch
@@ -37,6 +37,7 @@ class DruidConfig(val hosts: Seq[QueryHost],
                   val datasource: String,
                   val responseParsingTimeout: FiniteDuration,
                   val clientBackend: String,
+                  val clientConfig: Config,
                   val system: ActorSystem) {
   def copy(
       hosts: Seq[QueryHost] = this.hosts,
@@ -44,9 +45,17 @@ class DruidConfig(val hosts: Seq[QueryHost],
       url: String = this.url,
       datasource: String = this.datasource,
       responseParsingTimeout: FiniteDuration = this.responseParsingTimeout,
-      clientBackend: String = this.clientBackend
+      clientBackend: String = this.clientBackend,
+      clientConfig: Config = this.clientConfig
   ): DruidConfig =
-    new DruidConfig(hosts, secure, url, datasource, responseParsingTimeout, clientBackend, system)
+    new DruidConfig(hosts,
+                    secure,
+                    url,
+                    datasource,
+                    responseParsingTimeout,
+                    clientBackend,
+                    clientConfig,
+                    system)
 
   lazy val client: DruidClient = loadClient(clientBackend)
 
@@ -83,8 +92,16 @@ object DruidConfig {
             responseParsingTimeout: FiniteDuration =
               druidConfig.getDuration("response-parsing-timeout"),
             clientBackend: String = druidConfig.getString("client-backend"),
+            clientConfig: Config = druidConfig.getConfig("client-config"),
             system: ActorSystem = ActorSystem("scruid-actor-system")): DruidConfig =
-    new DruidConfig(hosts, secure, url, datasource, responseParsingTimeout, clientBackend, system)
+    new DruidConfig(hosts,
+                    secure,
+                    url,
+                    datasource,
+                    responseParsingTimeout,
+                    clientBackend,
+                    clientConfig,
+                    system)
 
   /**
     * Extract query node hosts with their ports from the specified configuration

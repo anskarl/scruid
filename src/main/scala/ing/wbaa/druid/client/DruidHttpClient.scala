@@ -34,8 +34,6 @@ class DruidHttpClient private (connectionFlow: DruidHttpClient.ConnectionFlowTyp
 ) extends DruidClient
     with DruidResponseHandler {
 
-  logger.info("!!! DruidHttpClient")
-
   private implicit val materializer = ActorMaterializer()
   private implicit val ec           = system.dispatcher
 
