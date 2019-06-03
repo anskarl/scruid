@@ -17,7 +17,7 @@
 
 package ing.wbaa.druid
 
-import ing.wbaa.druid.client.{ DruidAdvancedHttpClient, DruidCachedHttpClient, DruidHttpClient }
+import ing.wbaa.druid.client.DruidAdvancedHttpClient
 import ing.wbaa.druid.definitions._
 import io.circe.generic.auto._
 import org.scalatest._
@@ -54,7 +54,7 @@ class LoadBalanceSpec extends WordSpec with Matchers with ScalaFutures with Insp
           QueryHost("localhost", 8083),
           QueryHost("localhost", 8084)
         ),
-        clientBackend = classOf[DruidAdvancedHttpClient].getName
+        clientBackend = classOf[DruidAdvancedHttpClient]
       )
 
       implicit val ec = query.config.system.dispatcher
@@ -75,11 +75,13 @@ class LoadBalanceSpec extends WordSpec with Matchers with ScalaFutures with Insp
           QueryHost("localhost", 8082),
           QueryHost("localhost", 8083),
           QueryHost("localhost", 8084),
-          // the following nodes should randomly fail
+          // the following two nodes should randomly fail
           QueryHost("localhost", 8085),
-          QueryHost("localhost", 8086)
+          QueryHost("localhost", 8086),
+          // the following node always fails with Internal Server Error
+          QueryHost("localhost", 8087)
         ),
-        clientBackend = classOf[DruidAdvancedHttpClient].getName
+        clientBackend = classOf[DruidAdvancedHttpClient]
       )
 
       implicit val ec = query.config.system.dispatcher

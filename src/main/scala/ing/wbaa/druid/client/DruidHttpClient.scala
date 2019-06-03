@@ -29,9 +29,9 @@ import ing.wbaa.druid._
 
 import scala.concurrent.Future
 
-class DruidHttpClient private (connectionFlow: DruidHttpClient.ConnectionFlowType)(
-    implicit system: ActorSystem
-) extends DruidClient
+class DruidHttpClient private (connectionFlow: DruidHttpClient.ConnectionFlowType,
+                               queryHost: QueryHost)(implicit system: ActorSystem)
+    extends DruidClient
     with DruidResponseHandler {
 
   private implicit val materializer = ActorMaterializer()
@@ -41,8 +41,8 @@ class DruidHttpClient private (connectionFlow: DruidHttpClient.ConnectionFlowTyp
 
   override def actorMaterializer: ActorMaterializer = materializer
 
-  override def isHealthy(): Future[Boolean] = {
-    val request = HttpRequest(HttpMethods.GET, uri = DruidConfig.HealthEndpoint)
+  override def isHealthy()(implicit druidConfig: DruidConfig): Future[Boolean] = {
+    val request = HttpRequest(HttpMethods.GET, uri = druidConfig.healthEndpoint)
     Source
       .single(request)
       .via(connectionFlow)
@@ -50,6 +50,9 @@ class DruidHttpClient private (connectionFlow: DruidHttpClient.ConnectionFlowTyp
       .map(_.status == StatusCodes.OK)
       .recover { case _ => false }
   }
+
+  override def healthCheck(implicit druidConfig: DruidConfig): Future[Map[QueryHost, Boolean]] =
+    isHealthy.map(outcome => Map(queryHost -> outcome))
 
   override def doQuery(q: DruidQuery)(implicit druidConfig: DruidConfig): Future[DruidResponse] =
     Marshal(q)
@@ -104,7 +107,7 @@ object DruidHttpClient extends DruidClientConstructor {
     implicit val system = druidConfig.system
     val flow            = createConnectionFlow(druidConfig)
 
-    new DruidHttpClient(flow)
+    new DruidHttpClient(flow, druidConfig.hosts.head)
   }
 
   private def createConnectionFlow(

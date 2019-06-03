@@ -17,7 +17,7 @@
 
 package ing.wbaa.druid
 
-import ing.wbaa.druid.client.{ DruidAdvancedHttpClient, DruidCachedHttpClient, DruidHttpClient }
+import ing.wbaa.druid.client.{ DruidAdvancedHttpClient, DruidHttpClient }
 import ing.wbaa.druid.definitions._
 import io.circe.generic.auto._
 import org.scalatest._
@@ -26,7 +26,7 @@ import org.scalatest.time._
 
 import scala.concurrent.Future
 
-class DruidCachedHttpClientSpec extends WordSpec with Matchers with ScalaFutures with Inspectors {
+class DruidAdvancedHttpClientSpec extends WordSpec with Matchers with ScalaFutures with Inspectors {
 
   implicit override val patienceConfig =
     PatienceConfig(timeout = Span(3, Minutes), interval = Span(5, Millis))
@@ -46,7 +46,7 @@ class DruidCachedHttpClientSpec extends WordSpec with Matchers with ScalaFutures
     )
 
     s"fail to execute ${numberOfConcurrentQueries} concurrent queries when using '${classOf[DruidHttpClient].getName}'" in {
-      implicit val config = DruidConfig(clientBackend = classOf[DruidHttpClient].getName)
+      implicit val config = DruidConfig(clientBackend = classOf[DruidHttpClient])
 
       implicit val ec = query.config.system.dispatcher
 
@@ -62,8 +62,8 @@ class DruidCachedHttpClientSpec extends WordSpec with Matchers with ScalaFutures
 
     }
 
-    s"execute all ${numberOfConcurrentQueries} concurrent queries when using '${classOf[DruidCachedHttpClient].getName}'" in {
-      implicit val config = DruidConfig(clientBackend = classOf[DruidAdvancedHttpClient].getName)
+    s"execute all ${numberOfConcurrentQueries} concurrent queries when using '${classOf[DruidAdvancedHttpClient].getName}'" in {
+      implicit val config = DruidConfig(clientBackend = classOf[DruidAdvancedHttpClient])
 
       implicit val ec = query.config.system.dispatcher
 
@@ -77,6 +77,60 @@ class DruidCachedHttpClientSpec extends WordSpec with Matchers with ScalaFutures
 
     }
 
+  }
+
+  "DruidAdvancedHttpClient" should {
+
+    "indicate when Druid is healthy" in {
+      val config = DruidConfig(clientBackend = classOf[DruidAdvancedHttpClient])
+      val client = config.client
+
+      whenReady(client.isHealthy()) { result =>
+        result shouldBe true
+      }
+    }
+
+    "indicate when Druid is not healthy" in {
+      val config = DruidConfig(clientBackend = classOf[DruidAdvancedHttpClient],
+                               hosts = Seq(QueryHost("localhost", 8087)))
+      val client = config.client
+
+      whenReady(client.isHealthy()) { result =>
+        result shouldBe false
+      }
+    }
+
+    "correctly report the health status of all Druid brokers" in {
+
+      // A map with the expected QueryHost to health status.
+      // When the status is true the corresponding Broker is healthy, otherwise is false
+      val expectedHealthCheck = Map(
+        QueryHost("localhost", 8082) -> true,
+        QueryHost("localhost", 8083) -> true,
+        QueryHost("localhost", 8084) -> true,
+        // the following node always fails with Internal Server Error
+        QueryHost("localhost", 8087) -> false
+      )
+
+      val config = DruidConfig(clientBackend = classOf[DruidAdvancedHttpClient],
+                               hosts = expectedHealthCheck.keys.toSeq)
+
+      val client = config.client
+
+      // since localhost:8087 is always failing the health status should be false
+      whenReady(client.isHealthy()) { result =>
+        result shouldBe false
+      }
+
+      whenReady(client.healthCheck) { outcome =>
+        forAll(expectedHealthCheck) {
+          case (broker, expectedResult) =>
+            outcome(broker) shouldBe expectedResult
+        }
+
+      }
+
+    }
   }
 
 }

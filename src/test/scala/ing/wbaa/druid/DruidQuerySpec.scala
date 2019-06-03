@@ -33,7 +33,7 @@ class DruidQuerySpec extends WordSpec with Matchers with ScalaFutures {
   implicit override val patienceConfig =
     PatienceConfig(timeout = Span(20, Seconds), interval = Span(5, Millis))
   private val totalNumberOfEntries = 39244
-  implicit val config              = DruidConfig(clientBackend = classOf[DruidHttpClient].getName)
+  implicit val config              = DruidConfig(clientBackend = classOf[DruidHttpClient])
   implicit val mat                 = config.client.actorMaterializer
 
   case class TimeseriesCount(count: Int)

@@ -34,38 +34,38 @@ import scala.reflect.runtime.universe
 class DruidConfig(val hosts: Seq[QueryHost],
                   val secure: Boolean,
                   val url: String,
+                  val healthEndpoint: String,
                   val datasource: String,
                   val responseParsingTimeout: FiniteDuration,
-                  val clientBackend: String,
+                  val clientBackend: Class[_ <: DruidClient],
                   val clientConfig: Config,
                   val system: ActorSystem) {
   def copy(
       hosts: Seq[QueryHost] = this.hosts,
       secure: Boolean = this.secure,
       url: String = this.url,
+      healthEndpoint: String = this.healthEndpoint,
       datasource: String = this.datasource,
       responseParsingTimeout: FiniteDuration = this.responseParsingTimeout,
-      clientBackend: String = this.clientBackend,
+      clientBackend: Class[_ <: DruidClient] = this.clientBackend,
       clientConfig: Config = this.clientConfig
   ): DruidConfig =
     new DruidConfig(hosts,
                     secure,
                     url,
+                    healthEndpoint,
                     datasource,
                     responseParsingTimeout,
                     clientBackend,
                     clientConfig,
                     system)
 
-  lazy val client: DruidClient = loadClient(clientBackend)
-
-  private def loadClient(name: String): DruidClient = {
+  lazy val client: DruidClient = {
     val runtimeMirror     = universe.runtimeMirror(getClass.getClassLoader)
-    val module            = runtimeMirror.staticModule(name)
+    val module            = runtimeMirror.staticModule(clientBackend.getName)
     val obj               = runtimeMirror.reflectModule(module)
     val clientConstructor = obj.instance.asInstanceOf[DruidClientConstructor]
     clientConstructor(this)
-
   }
 }
 
@@ -78,25 +78,29 @@ object DruidConfig {
 
   private val druidConfig = config.getConfig("druid")
 
-  val HealthEndpoint = "/status/health"
+  //val HealthEndpoint = "/status/health"
 
   implicit def asFiniteDuration(d: java.time.Duration): FiniteDuration =
     scala.concurrent.duration.Duration.fromNanos(d.toNanos)
 
   implicit val DefaultConfig: DruidConfig = apply()
 
-  def apply(hosts: Seq[QueryHost] = extractHostsFromConfig,
-            secure: Boolean = druidConfig.getBoolean("secure"),
-            url: String = druidConfig.getString("url"),
-            datasource: String = druidConfig.getString("datasource"),
-            responseParsingTimeout: FiniteDuration =
-              druidConfig.getDuration("response-parsing-timeout"),
-            clientBackend: String = druidConfig.getString("client-backend"),
-            clientConfig: Config = druidConfig.getConfig("client-config"),
-            system: ActorSystem = ActorSystem("scruid-actor-system")): DruidConfig =
+  def apply(
+      hosts: Seq[QueryHost] = extractHostsFromConfig,
+      secure: Boolean = druidConfig.getBoolean("secure"),
+      url: String = druidConfig.getString("url"),
+      healthEndpoint: String = druidConfig.getString("health-endpoint"),
+      datasource: String = druidConfig.getString("datasource"),
+      responseParsingTimeout: FiniteDuration = druidConfig.getDuration("response-parsing-timeout"),
+      clientBackend: Class[_ <: DruidClient] =
+        Class.forName(druidConfig.getString("client-backend")).asInstanceOf[Class[DruidClient]],
+      clientConfig: Config = druidConfig.getConfig("client-config"),
+      system: ActorSystem = ActorSystem("scruid-actor-system")
+  ): DruidConfig =
     new DruidConfig(hosts,
                     secure,
                     url,
+                    healthEndpoint,
                     datasource,
                     responseParsingTimeout,
                     clientBackend,

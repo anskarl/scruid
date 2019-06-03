@@ -191,5 +191,5 @@ All parameters of `DruidConfig` are optional, and in case that some parameter is
 To run the tests, please make sure that you have the Druid instance running:
 
 ```
-docker-compose run --rm wait_for_druid && docker-compose up -d chaos_proxy_for_druid
+docker-compose run --rm wait_for_druid && docker-compose up -d chaos_proxies
 ```

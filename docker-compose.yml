@@ -9,7 +9,7 @@ services:
       - "8081:8081"
       - "8082:8082"
       - "8083:8082"
-      - "8084:8080"
+      - "8084:8082"
 
   wait_for_druid:
     image: dadarek/wait-for-dependencies:latest
@@ -26,7 +26,26 @@ services:
     links:
       - scruid_druid
     environment:
-      JAVA_OPTS: "-Dserver.port=8080 -Dchaos.strategy=RANDOM_HAVOC -Dchaos.strategy.delayResponse.random.maxSeconds=2 -Ddestination.hostProtocolAndPort=http://scruid_druid:8082"
+      JAVA_OPTS: "-Dserver.port=8090 -Dchaos.strategy=RANDOM_HAVOC -Dchaos.strategy.delayResponse.random.maxSeconds=2 -Ddestination.hostProtocolAndPort=http://scruid_druid:8082"
     ports:
-      - "8085:8080"
-      - "8086:8080"
+      - "8085:8090"
+      - "8086:8090"
+
+  always_fail:
+    image: andymacdonald/clusterf-chaos-proxy:latest
+    container_name: always_fail
+    depends_on:
+      - scruid_druid
+    links:
+      - scruid_druid
+    environment:
+      JAVA_OPTS: "-Dserver.port=8091 -Dchaos.strategy=INTERNAL_SERVER_ERROR -Ddestination.hostProtocolAndPort=http://scruid_druid:8082"
+    ports:
+      - "8087:8090"
+
+
+  chaos_proxies:
+    image: rwgrim/docker-noop
+    depends_on:
+      - chaos_proxy_for_druid
+      - always_fail

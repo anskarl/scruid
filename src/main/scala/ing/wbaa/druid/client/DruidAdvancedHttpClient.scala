@@ -37,6 +37,7 @@ import scala.util.{ Failure, Success, Try }
 
 class DruidAdvancedHttpClient private (
     connectionFlow: DruidAdvancedHttpClient.QueryConnectionFlowType,
+    flowsPerBroker: Map[QueryHost, DruidAdvancedHttpClient.QueryConnectionFlowType],
     responseParsingTimeout: FiniteDuration,
     url: String,
     bufferSize: Int,
@@ -66,20 +67,31 @@ class DruidAdvancedHttpClient private (
 
   override def actorMaterializer: ActorMaterializer = materializer
 
-  override def isHealthy(): Future[Boolean] = {
-    val responsePromise = Promise[HttpResponse]()
+  override def isHealthy()(implicit druidConfig: DruidConfig): Future[Boolean] =
+    healthCheck.map(_.forall { case (_, isHealthyBroker) => isHealthyBroker })
 
-    val request = HttpRequest(HttpMethods.GET, uri = DruidConfig.HealthEndpoint)
+  override def healthCheck(implicit druidConfig: DruidConfig): Future[Map[QueryHost, Boolean]] = {
 
-    Source
-      .single(request -> responsePromise)
-      .via(connectionFlow)
-      .runWith(Sink.head)
-      .flatMap {
-        case (Success(response), _) => Future(response.status == StatusCodes.OK)
-        case (Failure(ex), _)       => Future.failed(ex)
+    val request = HttpRequest(HttpMethods.GET, uri = druidConfig.healthEndpoint)
+
+    val checksF = Future.sequence {
+      flowsPerBroker.map {
+        case (broker, flow) =>
+          val responsePromise = Promise[HttpResponse]()
+
+          Source
+            .single(request -> responsePromise)
+            .via(flow)
+            .runWith(Sink.head)
+            .flatMap {
+              case (Success(response), _) => Future(broker -> (response.status == StatusCodes.OK))
+              case (Failure(ex), _)       => Future.failed(ex)
+            }
+            .recover { case _ => broker -> false }
       }
-      .recover { case _ => false }
+    }
+
+    checksF.map(_.toMap)
   }
 
   override def doQuery(q: DruidQuery)(implicit druidConfig: DruidConfig): Future[DruidResponse] =
@@ -151,27 +163,28 @@ class DruidAdvancedHttpClient private (
 
 object DruidAdvancedHttpClient extends DruidClientConstructor {
 
-  type QueryConnectionIn  = (HttpRequest, Promise[HttpResponse])
-  type QueryConnectionOut = (Try[HttpResponse], Promise[HttpResponse])
+  object Parameters {
+    final val DruidAdvancedHttpClient = "druid-advanced-http-client"
+    final val ConnectionPoolSettings  = "host-connection-pool"
+    final val QueueSize               = "queue-size"
+    final val QueueOverflowStrategy   = "queue-overflow-strategy"
+    final val RequestRetries          = "request-retries-per-host"
+    final val RequestRetryDelay       = "retry-delay"
+  }
 
+  type QueryConnectionIn       = (HttpRequest, Promise[HttpResponse])
+  type QueryConnectionOut      = (Try[HttpResponse], Promise[HttpResponse])
   type QueryConnectionFlowType = Flow[QueryConnectionIn, QueryConnectionOut, NotUsed]
-
-  final val ParamDruidAdvancedHttpClient = "druid-advanced-http-client"
-  final val ParamConnectionPoolSettings  = "host-connection-pool"
-  final val ParamBufferSize              = "buffer-size"
-  final val ParamBufferOverflowStrategy  = "buffer-overflow-strategy"
-  final val ParamRequestRetries          = "request-retries-per-host"
-  final val ParamRequestRetryDelay       = "retry-delay"
 
   override val supportsMultipleBrokers: Boolean = true
 
   override def apply(druidConfig: DruidConfig): DruidClient = {
     implicit val system = druidConfig.system
-    val clientConfig    = druidConfig.clientConfig.getConfig(ParamDruidAdvancedHttpClient)
+    val clientConfig    = druidConfig.clientConfig.getConfig(Parameters.DruidAdvancedHttpClient)
 
     val akkaHostConnectionPoolConf = ConfigFactory.load("akka.http.host-connection-pool")
 
-    val poolConfig = Try(clientConfig.getConfig(ParamConnectionPoolSettings))
+    val poolConfig = Try(clientConfig.getConfig(Parameters.ConnectionPoolSettings))
       .map { conf =>
         conf
           .atPath("akka.http.host-connection-pool")
@@ -179,34 +192,33 @@ object DruidAdvancedHttpClient extends DruidClientConstructor {
       }
       .getOrElse(akkaHostConnectionPoolConf)
 
-    val connectionFlow = createConnectionFlow(druidConfig.hosts, druidConfig.secure, poolConfig)
+    val flowsPerBroker = createConnectionFlows(druidConfig.hosts, druidConfig.secure, poolConfig)
+    val connectionFlow = createLoadBalanceFlow(flowsPerBroker)
 
-    val bufferSize = Option(clientConfig.getInt(ParamBufferSize)).getOrElse(32768)
+    val bufferSize = clientConfig.getInt(Parameters.QueueSize)
 
-    val bufferOverflowStrategy =
-      Option(clientConfig.getString(ParamBufferOverflowStrategy))
-        .map {
-          case "DropHead"     => OverflowStrategy.dropHead
-          case "DropTail"     => OverflowStrategy.dropTail
-          case "DropBuffer"   => OverflowStrategy.dropBuffer
-          case "DropNew"      => OverflowStrategy.dropNew
-          case "Fail"         => OverflowStrategy.fail
-          case "Backpressure" => OverflowStrategy.backpressure
-          case name =>
-            throw new ConfigException.Generic(
-              s"Unknown overflow strategy ($name) for client config parameter '$ParamBufferOverflowStrategy'"
-            )
-        }
-        .getOrElse(OverflowStrategy.backpressure)
+    val bufferOverflowStrategy = clientConfig.getString(Parameters.QueueOverflowStrategy) match {
+      case "DropHead"     => OverflowStrategy.dropHead
+      case "DropTail"     => OverflowStrategy.dropTail
+      case "DropBuffer"   => OverflowStrategy.dropBuffer
+      case "DropNew"      => OverflowStrategy.dropNew
+      case "Fail"         => OverflowStrategy.fail
+      case "Backpressure" => OverflowStrategy.backpressure
+      case name =>
+        throw new ConfigException.Generic(
+          s"Unknown overflow strategy ($name) for client config parameter '${Parameters.QueueOverflowStrategy}'"
+        )
+    }
 
-    val requestRetries = Option(clientConfig.getInt(ParamRequestRetries)).getOrElse(10)
+    val requestRetries = clientConfig.getInt(Parameters.RequestRetries)
 
-    val requestRetryDelay =
-      Option(clientConfig.getDuration(ParamRequestRetryDelay))
-        .map(_.toMillis.milliseconds)
-        .getOrElse(10.milliseconds)
+    val requestRetryDelay = clientConfig
+      .getDuration(Parameters.RequestRetryDelay)
+      .toMillis
+      .milliseconds
 
     new DruidAdvancedHttpClient(connectionFlow,
+                                flowsPerBroker,
                                 druidConfig.responseParsingTimeout,
                                 druidConfig.url,
                                 bufferSize,
@@ -215,34 +227,42 @@ object DruidAdvancedHttpClient extends DruidClientConstructor {
                                 requestRetryDelay)
   }
 
-  private def balancer[In, Out](workers: Seq[Flow[In, Out, Any]]): Flow[In, Out, NotUsed] = {
+  private def balancer[In, Out](brokers: Iterable[Flow[In, Out, Any]]): Flow[In, Out, NotUsed] = {
     import GraphDSL.Implicits._
 
     Flow.fromGraph(GraphDSL.create() { implicit b ⇒
-      val balancer = b.add(Balance[In](outputPorts = workers.size, waitForAllDownstreams = false))
-      val merge    = b.add(Merge[Out](workers.size))
+      val balancer = b.add(Balance[In](outputPorts = brokers.size, waitForAllDownstreams = false))
+      val merge    = b.add(Merge[Out](brokers.size))
 
-      workers.foreach { worker ⇒
-        balancer ~> worker ~> merge
-      }
+      brokers.foreach(broker ⇒ balancer ~> broker ~> merge)
 
       FlowShape(balancer.in, merge.out)
     })
   }
 
-  private def createConnectionFlow(hosts: Seq[QueryHost],
-                                   secureConnection: Boolean,
-                                   connectionPoolConfig: Config)(
+  private def createLoadBalanceFlow(brokerFlows: Map[QueryHost, QueryConnectionFlowType])(
       implicit system: ActorSystem
   ): QueryConnectionFlowType = {
+
+    val flows = brokerFlows.values
+
+    if (flows.size > 1) balancer[QueryConnectionIn, QueryConnectionOut](flows) else flows.head
+
+  }
+
+  private def createConnectionFlows(
+      hosts: Seq[QueryHost],
+      secureConnection: Boolean,
+      connectionPoolConfig: Config
+  )(implicit system: ActorSystem): Map[QueryHost, QueryConnectionFlowType] = {
 
     require(hosts.nonEmpty)
 
     val settings: ConnectionPoolSettings = ConnectionPoolSettings(connectionPoolConfig)
     val log: LoggingAdapter              = system.log
 
-    val workers: Seq[QueryConnectionFlowType] = hosts.map { queryHost ⇒
-      Flow[QueryConnectionIn]
+    hosts.map { queryHost ⇒
+      val flow = Flow[QueryConnectionIn]
         .log("scruid-load-balancer", _ => s"Sending query to ${queryHost.host}:${queryHost.port}")
         .via {
           if (secureConnection) {
@@ -261,9 +281,8 @@ object DruidAdvancedHttpClient extends DruidClientConstructor {
             )
           }
         }
-    }
 
-    if (hosts.size > 1) balancer[QueryConnectionIn, QueryConnectionOut](workers) else workers.head
-
+      queryHost -> flow
+    }.toMap
   }
 }

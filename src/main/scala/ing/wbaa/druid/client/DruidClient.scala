@@ -42,7 +42,8 @@ trait DruidClient extends CirceHttpSupport with JavaTimeDecoders {
 
   def actorSystem: ActorSystem
   def actorMaterializer: ActorMaterializer
-  def isHealthy(): Future[Boolean]
+  def isHealthy()(implicit druidConfig: DruidConfig): Future[Boolean]
+  def healthCheck(implicit druidConfig: DruidConfig): Future[Map[QueryHost, Boolean]]
   def doQuery(q: DruidQuery)(implicit druidConfig: DruidConfig): Future[DruidResponse]
   def doQueryAsStream(q: DruidQuery)(
       implicit druidConfig: DruidConfig
