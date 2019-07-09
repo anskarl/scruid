@@ -18,6 +18,8 @@ scalacOptions ++= Seq("-Xmax-classfile-name", "78")
 
 lazy val unusedWarnings = Seq("-Ywarn-unused-import", "-Ywarn-unused")
 
+val paradiseVersion = "2.1.1"
+
 lazy val commonSettings: Seq[Setting[_]] = Seq(
   bintrayOrganization := Some("ing-bank"),
   bintrayRepository := "maven-releases",
@@ -53,7 +55,10 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
     .toList
     .flatten,
   publishArtifact in Test := false,
-  Test / parallelExecution := false
+  Test / parallelExecution := false,
+  libraryDependencies += compilerPlugin(
+    "org.scalamacros" % "paradise" % paradiseVersion cross CrossVersion.patch
+  ) //todo in Scala 2.13 is a compiler flag -Ymacro-annotations
 ) ++ Seq(Compile, Test).flatMap(c => scalacOptions in (c, console) --= unusedWarnings)
 
 val circeVersion = "0.11.1"
@@ -64,22 +69,23 @@ lazy val root = (project in file("."))
   .settings(commonSettings)
   .settings(
     name := "scruid",
-    version := "2.2.0",
+    version := "2.2.1-SNAPSHOT",
     libraryDependencies ++= Seq(
-      "com.typesafe"      % "config"             % "1.3.3",
-      "io.circe"          %% "circe-core"        % circeVersion,
-      "io.circe"          %% "circe-parser"      % circeVersion,
-      "io.circe"          %% "circe-generic"     % circeVersion,
-      "io.circe"          %% "circe-java8"       % circeVersion,
-      "org.mdedetrich"    %% "akka-stream-json"  % mdedetrichVersion,
-      "org.mdedetrich"    %% "akka-http-json"    % mdedetrichVersion,
-      "org.mdedetrich"    %% "akka-stream-circe" % mdedetrichVersion,
-      "org.mdedetrich"    %% "akka-http-circe"   % mdedetrichVersion,
-      "com.typesafe.akka" %% "akka-http"         % "10.1.5",
-      "ca.mrvisser"       %% "sealerate"         % "0.0.5",
-      "ch.qos.logback"    % "logback-classic"    % "1.2.3",
-      "org.scalactic"     %% "scalactic"         % "3.0.5",
-      "org.scalatest"     %% "scalatest"         % "3.0.5" % "test"
+      "com.typesafe"      % "config"                % "1.3.3",
+      "io.circe"          %% "circe-core"           % circeVersion,
+      "io.circe"          %% "circe-parser"         % circeVersion,
+      "io.circe"          %% "circe-generic"        % circeVersion,
+      "io.circe"          %% "circe-generic-extras" % circeVersion,
+      "io.circe"          %% "circe-java8"          % circeVersion,
+      "org.mdedetrich"    %% "akka-stream-json"     % mdedetrichVersion,
+      "org.mdedetrich"    %% "akka-http-json"       % mdedetrichVersion,
+      "org.mdedetrich"    %% "akka-stream-circe"    % mdedetrichVersion,
+      "org.mdedetrich"    %% "akka-http-circe"      % mdedetrichVersion,
+      "com.typesafe.akka" %% "akka-http"            % "10.1.5",
+      "ca.mrvisser"       %% "sealerate"            % "0.0.5",
+      "ch.qos.logback"    % "logback-classic"       % "1.2.3",
+      "org.scalactic"     %% "scalactic"            % "3.0.5",
+      "org.scalatest"     %% "scalatest"            % "3.0.5" % "test"
     ),
     resolvers += Resolver.sonatypeRepo("releases")
   )

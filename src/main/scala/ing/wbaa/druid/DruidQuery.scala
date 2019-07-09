@@ -44,6 +44,7 @@ sealed trait DruidQuery {
   val aggregations: Iterable[Aggregation]
   val filter: Option[Filter]
   val intervals: Iterable[String]
+  val context: QueryContext
 
   def execute()(implicit config: DruidConfig = DruidConfig.DefaultConfig): Future[DruidResponse] =
     config.client.doQuery(this)
@@ -82,6 +83,7 @@ sealed trait DruidQuery {
 }
 
 object DruidQuery {
+
   implicit val encoder: Encoder[DruidQuery] = new Encoder[DruidQuery] {
     final def apply(query: DruidQuery): Json =
       (query match {
@@ -102,7 +104,8 @@ case class GroupByQuery(
     granularity: Granularity = GranularityType.All,
     having: Option[Having] = None,
     limitSpec: Option[LimitSpec] = None,
-    postAggregations: Iterable[PostAggregation] = Iterable.empty
+    postAggregations: Iterable[PostAggregation] = Iterable.empty,
+    context: QueryContext = QueryContext.empty
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidQuery {
   val queryType          = QueryType.GroupBy
@@ -149,7 +152,8 @@ case class TimeSeriesQuery(
     filter: Option[Filter] = None,
     granularity: Granularity = GranularityType.Week,
     descending: String = "true",
-    postAggregations: Iterable[PostAggregation] = Iterable.empty
+    postAggregations: Iterable[PostAggregation] = Iterable.empty,
+    context: QueryContext = QueryContext.empty
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidQuery {
   val queryType          = QueryType.Timeseries
@@ -164,7 +168,8 @@ case class TopNQuery(
     intervals: Iterable[String],
     granularity: Granularity = GranularityType.All,
     filter: Option[Filter] = None,
-    postAggregations: Iterable[PostAggregation] = Iterable.empty
+    postAggregations: Iterable[PostAggregation] = Iterable.empty,
+    context: QueryContext = QueryContext.empty
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidQuery {
   val queryType          = QueryType.TopN

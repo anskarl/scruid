@@ -21,11 +21,14 @@ import ing.wbaa.druid._
 import ing.wbaa.druid.definitions._
 import ing.wbaa.druid.dql.expressions._
 
+import scala.concurrent.duration.FiniteDuration
+
 /**
   * Collection of common functions for all query builders
   */
 private[dql] sealed trait QueryBuilderCommons {
 
+  protected var queryContextOpt                 = Option.empty[QueryContext]
   protected var dataSourceOpt                   = Option.empty[String]
   protected var granularityOpt                  = Option.empty[Granularity]
   protected var aggregations: List[Aggregation] = Nil
@@ -37,6 +40,17 @@ private[dql] sealed trait QueryBuilderCommons {
   protected var filters: List[Filter] = Nil
 
   protected var postAggregationExpr: List[PostAggregationExpression] = Nil
+
+  def queryContext(ctx: QueryContext): this.type = {
+    queryContextOpt = Option(ctx)
+    this
+  }
+
+  def queryContext(ctx: QueryContextBuilder => QueryContextBuilder): this.type = {
+    val builder = ctx(new QueryContextBuilder)
+    queryContextOpt = Option(builder.build())
+    this
+  }
 
   /**
     * Specify the datasource to use, other than the default one in the configuration
@@ -104,6 +118,7 @@ private[dql] sealed trait QueryBuilderCommons {
     else Option(AndFilter(filters))
 
   protected def copyTo[T <: QueryBuilderCommons](other: T): T = {
+    other.queryContextOpt = queryContextOpt
     other.dataSourceOpt = dataSourceOpt
     other.granularityOpt = granularityOpt
     other.aggregations = aggregations
@@ -152,7 +167,8 @@ final class QueryBuilder private[dql] () extends QueryBuilderCommons {
       filter = this.getFilters,
       granularity = this.granularityOpt.getOrElse(GranularityType.Week),
       descending = this.descending.toString,
-      postAggregations = this.getPostAggs
+      postAggregations = this.getPostAggs,
+      context = this.queryContextOpt.getOrElse(QueryContext.empty)
     )(conf)
   }
 
@@ -221,7 +237,8 @@ final class TopNQueryBuilder private[dql] (dimension: Dim, metric: String, n: In
       intervals = this.intervals,
       granularity = this.granularityOpt.getOrElse(GranularityType.All),
       filter = this.getFilters,
-      postAggregations = this.getPostAggs
+      postAggregations = this.getPostAggs,
+      context = this.queryContextOpt.getOrElse(QueryContext.empty)
     )(conf)
   }
 
@@ -327,8 +344,242 @@ final class GroupByQueryBuilder private[dql] (dimensions: Iterable[Dim])
       granularity = this.granularityOpt.getOrElse(GranularityType.All),
       having = havingOpt,
       limitSpec = limitSpecOpt,
-      postAggregations = this.getPostAggs
+      postAggregations = this.getPostAggs,
+      context = this.queryContextOpt.getOrElse(QueryContext.empty)
     )(conf)
   }
 
+}
+
+final class QueryContextBuilder { self =>
+
+  // the following apply only to all queries
+  private var timeoutOpt: Option[Long]                         = None
+  private var priorityOpt: Option[Int]                         = None
+  private var queryIdOpt: Option[String]                       = None
+  private var useCacheOpt: Option[Boolean]                     = None
+  private var populateCacheOpt: Option[Boolean]                = None
+  private var useResultLevelCacheOpt: Option[Boolean]          = None
+  private var populateResultLevelCacheOpt: Option[Boolean]     = None
+  private var bySegmentOpt: Option[Boolean]                    = None
+  private var finalizeAggregationResultsOpt: Option[Boolean]   = None
+  private var chunkPeriodOpt: Option[String]                   = None
+  private var maxScatterGatherBytesOpt: Option[Long]           = None
+  private var maxQueuedBytesOpt: Option[Long]                  = None
+  private var serializeDateTimeAsLongOpt: Option[Boolean]      = None
+  private var serializeDateTimeAsLongInnerOpt: Option[Boolean] = None
+  // the following apply only to time-series queries
+  private var skipEmptyBucketsOpt: Option[Boolean] = None
+  private var grandTotalOpt: Option[Boolean]       = None
+  // the following apply only to top-n queries
+  private var minTopNThresholdOpt: Option[Int] = None
+  // the following apply only to group-by queries
+  private var groupByStrategyOpt: Option[GroupByStrategyType] = None
+  private var groupByIsSingleThreadedOpt: Option[Boolean]     = None
+  // Group-by V2
+  private var maxMergingDictionarySizeOpt: Option[Long]     = None
+  private var maxOnDiskStorageOpt: Option[Long]             = None
+  private var bufferGrouperInitialBucketsOpt: Option[Int]   = None
+  private var bufferGrouperMaxLoadFactorOpt: Option[Double] = None
+  private var forceHashAggregationOpt: Option[Boolean]      = None
+  private var intermediateCombineDegreeOpt: Option[Int]     = None
+  private var numParallelCombineThreadsOpt: Option[Int]     = None
+  // todo check if it has any side-effect regarding how Scruid parses responses
+  private var sortByDimsFirstOpt: Option[Boolean]    = None
+  private var forceLimitPushDownOpt: Option[Boolean] = None
+
+  // Group-by V1
+  private var maxIntermediateRowsOpt: Option[Int] = None
+  private var maxResultsOpt: Option[Int]          = None
+  private var useOffheapOpt: Option[Boolean]      = None
+
+  def timeout(v: Long): self.type = {
+    timeoutOpt = Option(v)
+    self
+  }
+
+  def timeout(duration: FiniteDuration): self.type = {
+    timeoutOpt = Option(duration.toMillis)
+    self
+  }
+
+  def priority(v: Int): self.type = {
+    priorityOpt = Option(v)
+    self
+  }
+
+  def queryId(v: String): self.type = {
+    queryIdOpt = Option(v)
+    self
+  }
+
+  def useCache(v: Boolean): self.type = {
+    useCacheOpt = Option(v)
+    self
+  }
+
+  def populateCache(v: Boolean): self.type = {
+    populateCacheOpt = Option(v)
+    self
+  }
+
+  def useResultLevelCache(v: Boolean): self.type = {
+    useResultLevelCacheOpt = Option(v)
+    self
+  }
+
+  def populateResultLevelCache(v: Boolean): self.type = {
+    populateResultLevelCacheOpt = Option(v)
+    self
+  }
+
+  def bySegment(v: Boolean): self.type = {
+    bySegmentOpt = Option(v)
+    self
+  }
+
+  def finalizeAggregationResults(v: Boolean): self.type = {
+    finalizeAggregationResultsOpt = Option(v)
+    self
+  }
+
+  def chunkPeriod(v: String): self.type = {
+    chunkPeriodOpt = Option(v)
+    self
+  }
+
+  def chunkPeriod(v: java.time.Duration): self.type = {
+    chunkPeriodOpt = Option(v.toString)
+    self
+  }
+
+  def maxScatterGatherBytes(v: Long): self.type = {
+    maxScatterGatherBytesOpt = Option(v)
+    self
+  }
+
+  def maxQueuedBytes(v: Long): self.type = {
+    maxQueuedBytesOpt = Option(v)
+    self
+  }
+
+  def serializeDateTimeAsLong(v: Boolean): self.type = {
+    serializeDateTimeAsLongOpt = Option(v)
+    self
+  }
+
+  def serializeDateTimeAsLongInner(v: Boolean): self.type = {
+    serializeDateTimeAsLongInnerOpt = Option(v)
+    self
+  }
+
+  def skipEmptyBuckets(v: Boolean): self.type = {
+    skipEmptyBucketsOpt = Option(v)
+    self
+  }
+  def grandTotal(v: Boolean): self.type = {
+    grandTotalOpt = Option(v)
+    self
+  }
+
+  def minTopNThreshold(v: Int): self.type = {
+    minTopNThresholdOpt = Option(v)
+    self
+  }
+
+  def groupByStrategy(v: GroupByStrategyType): self.type = {
+    groupByStrategyOpt = Option(v)
+    self
+  }
+
+  def groupByIsSingleThreaded(v: Boolean): self.type = {
+    groupByIsSingleThreadedOpt = Option(v)
+    self
+  }
+
+  def maxMergingDictionarySize(v: Long): self.type = {
+    maxMergingDictionarySizeOpt = Option(v)
+    self
+  }
+
+  def maxOnDiskStorage(v: Long): self.type = {
+    maxOnDiskStorageOpt = Option(v)
+    self
+  }
+
+  def bufferGrouperInitialBuckets(v: Int): self.type = {
+    bufferGrouperInitialBucketsOpt = Option(v)
+    self
+  }
+  def bufferGrouperMaxLoadFactor(v: Double): self.type = {
+    bufferGrouperMaxLoadFactorOpt = Option(v)
+    self
+  }
+  def forceHashAggregation(v: Boolean): self.type = {
+    forceHashAggregationOpt = Option(v)
+    self
+  }
+  def intermediateCombineDegree(v: Int): self.type = {
+    intermediateCombineDegreeOpt = Option(v)
+    self
+  }
+  def numParallelCombineThreads(v: Int): self.type = {
+    numParallelCombineThreadsOpt = Option(v)
+    self
+  }
+  def sortByDimsFirst(v: Boolean): self.type = {
+    sortByDimsFirstOpt = Option(v)
+    self
+  }
+  def forceLimitPushDown(v: Boolean): self.type = {
+    forceLimitPushDownOpt = Option(v)
+    self
+  }
+  def maxIntermediateRows(v: Int): self.type = {
+    maxIntermediateRowsOpt = Option(v)
+    self
+  }
+  def maxResults(v: Int): self.type = {
+    maxResultsOpt = Option(v)
+    self
+  }
+  def useOffheap(v: Boolean): self.type = {
+    useOffheapOpt = Option(v)
+    self
+  }
+
+  def build(): QueryContext =
+    QueryContext(
+      timeout = timeoutOpt,
+      priority = priorityOpt,
+      queryId = queryIdOpt,
+      useCache = useCacheOpt,
+      populateCache = populateCacheOpt,
+      useResultLevelCache = useResultLevelCacheOpt,
+      populateResultLevelCache = populateResultLevelCacheOpt,
+      bySegment = bySegmentOpt,
+      finalizeAggregationResults = finalizeAggregationResultsOpt,
+      chunkPeriod = chunkPeriodOpt,
+      maxScatterGatherBytes = maxScatterGatherBytesOpt,
+      maxQueuedBytes = maxQueuedBytesOpt,
+      serializeDateTimeAsLong = serializeDateTimeAsLongOpt,
+      serializeDateTimeAsLongInner = serializeDateTimeAsLongInnerOpt,
+      skipEmptyBuckets = skipEmptyBucketsOpt,
+      grandTotal = grandTotalOpt,
+      minTopNThreshold = minTopNThresholdOpt,
+      groupByStrategy = groupByStrategyOpt,
+      groupByIsSingleThreaded = groupByIsSingleThreadedOpt,
+      maxMergingDictionarySize = maxMergingDictionarySizeOpt,
+      maxOnDiskStorage = maxOnDiskStorageOpt,
+      bufferGrouperInitialBuckets = bufferGrouperInitialBucketsOpt,
+      bufferGrouperMaxLoadFactor = bufferGrouperMaxLoadFactorOpt,
+      forceHashAggregation = forceHashAggregationOpt,
+      intermediateCombineDegree = intermediateCombineDegreeOpt,
+      numParallelCombineThreads = numParallelCombineThreadsOpt,
+      sortByDimsFirst = sortByDimsFirstOpt,
+      forceLimitPushDown = forceLimitPushDownOpt,
+      maxIntermediateRows = maxIntermediateRowsOpt,
+      maxResults = maxResultsOpt,
+      useOffheap = useOffheapOpt
+    )
 }
