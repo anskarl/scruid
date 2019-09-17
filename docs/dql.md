@@ -357,7 +357,7 @@ count as "some_count" // uses the name "some_count"
 
 #### Sum aggregators
 
-`longSum` and `doubleSum` computes the sum of values as a 64-bit signed integer or floating point value, respectively.
+`longSum`, `floatSum` and `doubleSum` computes the sum of values as a 64-bit signed integer or floating point value, respectively.
 
 ```scala
 // can be defined over some dimension
@@ -369,7 +369,7 @@ doubleSum('dim_name) as "agg_sum"
 
 #### Min / Max aggregators
 
-`longMin` and `doubleMin` computes the minimum of all metric values and Long.MAX_VALUE
+`longMin`, `floatMin` and `doubleMin` computes the minimum of all metric values and Long.MAX_VALUE
 or Double.POSITIVE_INFINITY, respectively.
 
 ```scala
@@ -380,14 +380,14 @@ or Double.POSITIVE_INFINITY, respectively.
 doubleMin('dim_name) as "agg_min"
 ```
 
-Similarly, `longMax` and `doubleMax` computes the maximum of all metric values and Long.MIN_VALUE
+Similarly, `longMax`, `floatMax` and `doubleMax` computes the maximum of all metric values and Long.MIN_VALUE
 or Double.NEGATIVE_INFINITY, respectively.
 
 
 #### First / Last aggregator
 
-`longFirst` and `doubleFirst` computes the metric value with the minimum timestamp or 0 if no row exist.
-`longLast` and `doubleLast` computes the metric value with the maximum timestamp or 0 if no row exist
+`longFirst`, `floatFirst` and `doubleFirst` computes the metric value with the minimum timestamp or 0 if no row exist.
+`longLast`, `floatLast` and `doubleLast` computes the metric value with the maximum timestamp or 0 if no row exist
 
 ```scala
 // can be defined over some dimension
@@ -397,9 +397,20 @@ or Double.NEGATIVE_INFINITY, respectively.
 doubleLast('dim_name) as "agg_last"
 ```
 
+`stringFirst` computes the metric value with the minimum timestamp or `null` if no row exist. 
+`stringLast` computes the metric value with the maximum timestamp or `null` if no row exist.
+
+```scala
+// can be defined over some dimension
+'dim_name.stringFirst as "agg_first"
+
+// or as function
+stringLast('dim_name) as "agg_last"
+```
 #### Approximate Aggregations
 
-DQL supports `thetaSketch`, `hyperUnique` and `cardinality` approximate aggregators.
+
+DQL supports `thetaSketch`, `hllSketchBuild`, `hllSketchMerge`, `hyperUnique` and `cardinality` approximate aggregators.
 
 ```scala
 // can be defined over some dimension
@@ -458,6 +469,10 @@ cardinality aggregation as below:
 ```scala
 cardinality('dim_name_one, 'dim_name_two, 'dim_name_three.extract(SubstringExtractionFn(0, Some(1))).as("dim_name_three_first_char"))
 ```
+
+Please note the [Theta Sketch](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-theta.html) 
+and [HLL Sketch](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-hll.html) require 
+the corresponding extensions to be [included in Druid server config file](https://druid.apache.org/docs/latest/operations/including-extensions.html).
 
 #### Filtered Aggregator
 

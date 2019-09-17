@@ -54,8 +54,35 @@ trait AggregationOps {
   def doubleLast(dimName: String): DoubleLastAgg = new DoubleLastAgg(dimName)
   def doubleLast(dim: Dim): DoubleLastAgg        = doubleLast(dim.name)
 
+  def floatSum(dimName: String): FloatSumAgg = new FloatSumAgg(dimName)
+  def floatSum(dim: Dim): FloatSumAgg        = floatSum(dim.name)
+
+  def floatMax(dimName: String): FloatMaxAgg = new FloatMaxAgg(dimName)
+  def floatMax(dim: Dim): FloatMaxAgg        = floatMax(dim.name)
+
+  def floatMin(dimName: String): FloatMinAgg = new FloatMinAgg(dimName)
+  def floatMin(dim: Dim): FloatMinAgg        = floatMin(dim.name)
+
+  def floatFirst(dimName: String): FloatFirstAgg = new FloatFirstAgg(dimName)
+  def floatFirst(dim: Dim): FloatFirstAgg        = floatFirst(dim.name)
+
+  def floatLast(dimName: String): FloatLastAgg = new FloatLastAgg(dimName)
+  def floatLast(dim: Dim): FloatLastAgg        = floatLast(dim.name)
+
+  def stringFirst(dimName: String): StringFirstAgg = StringFirstAgg(dimName)
+  def stringFirst(dim: Dim): StringFirstAgg        = stringFirst(dim.name)
+
+  def stringLast(dimName: String): StringLastAgg = StringLastAgg(dimName)
+  def stringLast(dim: Dim): StringLastAgg        = stringLast(dim.name)
+
   def thetaSketch(dimName: String): ThetaSketchAgg = ThetaSketchAgg(dimName)
   def thetaSketch(dim: Dim): ThetaSketchAgg        = thetaSketch(dim.name)
+
+  def hllSketchBuild(dimName: String): HLLSketchBuildAgg = HLLSketchBuildAgg(dimName)
+  def hllSketchBuild(dim: Dim): HLLSketchBuildAgg        = HLLSketchBuildAgg(dim.name)
+
+  def hllSketchMerge(dimName: String): HLLSketchMergeAgg = HLLSketchMergeAgg(dimName)
+  def hllSketchMerge(dim: Dim): HLLSketchMergeAgg        = HLLSketchMergeAgg(dim.name)
 
   def hyperUnique(dimName: String): HyperUniqueAgg = HyperUniqueAgg(dimName)
 
