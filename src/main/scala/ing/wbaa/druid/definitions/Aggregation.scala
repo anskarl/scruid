@@ -27,31 +27,32 @@ import definitions.Filter.{ encoder => filterEncoder }
 
 sealed trait AggregationType extends Enum with CamelCaseEnumStringEncoder
 object AggregationType extends EnumCodec[AggregationType] {
-  case object Count          extends AggregationType
-  case object LongSum        extends AggregationType
-  case object DoubleSum      extends AggregationType
-  case object FloatSum       extends AggregationType
-  case object DoubleMax      extends AggregationType
-  case object DoubleMin      extends AggregationType
-  case object FloatMax       extends AggregationType
-  case object FloatMin       extends AggregationType
-  case object LongMin        extends AggregationType
-  case object LongMax        extends AggregationType
-  case object DoubleFirst    extends AggregationType
-  case object DoubleLast     extends AggregationType
-  case object FloatFirst     extends AggregationType
-  case object FloatLast      extends AggregationType
-  case object LongFirst      extends AggregationType
-  case object LongLast       extends AggregationType
-  case object StringFirst    extends AggregationType
-  case object StringLast     extends AggregationType
-  case object ThetaSketch    extends AggregationType
-  case object HLLSketchBuild extends AggregationType
-  case object HLLSketchMerge extends AggregationType
-  case object HyperUnique    extends AggregationType
-  case object Cardinality    extends AggregationType
-  case object Filtered       extends AggregationType
-  case object Javascript     extends AggregationType
+  case object Count                  extends AggregationType
+  case object LongSum                extends AggregationType
+  case object DoubleSum              extends AggregationType
+  case object FloatSum               extends AggregationType
+  case object DoubleMax              extends AggregationType
+  case object DoubleMin              extends AggregationType
+  case object FloatMax               extends AggregationType
+  case object FloatMin               extends AggregationType
+  case object LongMin                extends AggregationType
+  case object LongMax                extends AggregationType
+  case object DoubleFirst            extends AggregationType
+  case object DoubleLast             extends AggregationType
+  case object FloatFirst             extends AggregationType
+  case object FloatLast              extends AggregationType
+  case object LongFirst              extends AggregationType
+  case object LongLast               extends AggregationType
+  case object StringFirst            extends AggregationType
+  case object StringLast             extends AggregationType
+  case object ThetaSketch            extends AggregationType
+  case object HLLSketchBuild         extends AggregationType
+  case object HLLSketchMerge         extends AggregationType
+  case object QuantilesDoublesSketch extends AggregationType
+  case object HyperUnique            extends AggregationType
+  case object Cardinality            extends AggregationType
+  case object Filtered               extends AggregationType
+  case object Javascript             extends AggregationType
   val values: Set[AggregationType] = sealerate.values[AggregationType]
 }
 
@@ -80,27 +81,28 @@ trait SingleFieldAggregation extends Aggregation {
 object SingleFieldAggregation {
   implicit val encoder: Encoder[SingleFieldAggregation] = new Encoder[SingleFieldAggregation] {
     final def apply(agg: SingleFieldAggregation): Json = agg match {
-      case x: LongSumAggregation        => x.asJson
-      case x: DoubleSumAggregation      => x.asJson
-      case x: DoubleMaxAggregation      => x.asJson
-      case x: DoubleMinAggregation      => x.asJson
-      case x: FloatSumAggregation       => x.asJson
-      case x: FloatMaxAggregation       => x.asJson
-      case x: FloatMinAggregation       => x.asJson
-      case x: LongMaxAggregation        => x.asJson
-      case x: LongMinAggregation        => x.asJson
-      case x: DoubleFirstAggregation    => x.asJson
-      case x: DoubleLastAggregation     => x.asJson
-      case x: FloatFirstAggregation     => x.asJson
-      case x: FloatLastAggregation      => x.asJson
-      case x: LongLastAggregation       => x.asJson
-      case x: LongFirstAggregation      => x.asJson
-      case x: StringFirstAggregation    => x.asJson
-      case x: StringLastAggregation     => x.asJson
-      case x: ThetaSketchAggregation    => x.asJson
-      case x: HLLSketchBuildAggregation => x.asJson
-      case x: HLLSketchMergeAggregation => x.asJson
-      case x: HyperUniqueAggregation    => x.asJson
+      case x: LongSumAggregation                => x.asJson
+      case x: DoubleSumAggregation              => x.asJson
+      case x: DoubleMaxAggregation              => x.asJson
+      case x: DoubleMinAggregation              => x.asJson
+      case x: FloatSumAggregation               => x.asJson
+      case x: FloatMaxAggregation               => x.asJson
+      case x: FloatMinAggregation               => x.asJson
+      case x: LongMaxAggregation                => x.asJson
+      case x: LongMinAggregation                => x.asJson
+      case x: DoubleFirstAggregation            => x.asJson
+      case x: DoubleLastAggregation             => x.asJson
+      case x: FloatFirstAggregation             => x.asJson
+      case x: FloatLastAggregation              => x.asJson
+      case x: LongLastAggregation               => x.asJson
+      case x: LongFirstAggregation              => x.asJson
+      case x: StringFirstAggregation            => x.asJson
+      case x: StringLastAggregation             => x.asJson
+      case x: ThetaSketchAggregation            => x.asJson
+      case x: HLLSketchBuildAggregation         => x.asJson
+      case x: HLLSketchMergeAggregation         => x.asJson
+      case x: QuantilesDoublesSketchAggregation => x.asJson
+      case x: HyperUniqueAggregation            => x.asJson
     }
   }
 }
@@ -215,6 +217,14 @@ case class HyperUniqueAggregation(
     round: Boolean = false
 ) extends SingleFieldAggregation {
   val `type` = AggregationType.HyperUnique
+}
+
+case class QuantilesDoublesSketchAggregation(
+    name: String,
+    fieldName: String,
+    k: Int = 128
+) extends SingleFieldAggregation {
+  val `type` = AggregationType.QuantilesDoublesSketch
 }
 
 case class CardinalityAggregation(

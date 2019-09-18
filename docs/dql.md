@@ -409,8 +409,14 @@ stringLast('dim_name) as "agg_last"
 ```
 #### Approximate Aggregations
 
-
-DQL supports `thetaSketch`, `hllSketchBuild`, `hllSketchMerge`, `hyperUnique` and `cardinality` approximate aggregators.
+DQL supports Druid [`hyperUnique` and `cardinality` aggregators](https://druid.apache.org/docs/latest/querying/hll-old.html), 
+as well as [DataSketches-based](https://datasketches.apache.org/) aggregators such as 
+[`thetaSketch`](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-theta.html), 
+[`hllSketchBuild`, `hllSketchMerge`](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-hll.html) 
+and [`quantilesDoubles`](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-quantiles.html).
+ 
+Please note that DataSketches-based require aggregators the `druid-datasketches` extension to be
+[included in Druid server config file](https://druid.apache.org/docs/latest/operations/including-extensions.html).
 
 ```scala
 // can be defined over some dimension
@@ -469,10 +475,6 @@ cardinality aggregation as below:
 ```scala
 cardinality('dim_name_one, 'dim_name_two, 'dim_name_three.extract(SubstringExtractionFn(0, Some(1))).as("dim_name_three_first_char"))
 ```
-
-Please note the [Theta Sketch](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-theta.html) 
-and [HLL Sketch](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-hll.html) require 
-the corresponding extensions to be [included in Druid server config file](https://druid.apache.org/docs/latest/operations/including-extensions.html).
 
 #### Filtered Aggregator
 

@@ -365,6 +365,20 @@ final case class HyperUniqueAgg(fieldName: String,
   override def getName: String = name.getOrElse(s"hyper_unique_$fieldName")
 }
 
+final case class QuantilesDoublesSketchAgg(
+    fieldName: String,
+    name: Option[String] = None,
+    k: Int = 128
+) extends AggregationExpression {
+
+  override protected[dql] def build(): Aggregation =
+    QuantilesDoublesSketchAggregation(this.getName, fieldName, k)
+
+  override def alias(name: String): QuantilesDoublesSketchAgg = copy(name = Option(name))
+
+  override def getName: String = name.getOrElse(s"quantiles_doubles_$fieldName")
+}
+
 final case class CardinalityAgg(fields: Seq[Dim],
                                 name: Option[String] = None,
                                 byRow: Boolean = false,

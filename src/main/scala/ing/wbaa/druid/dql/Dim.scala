@@ -564,6 +564,8 @@ case class Dim private[dql] (name: String,
 
   def hllSketchMerge: HLLSketchMergeAgg = AggregationOps.hllSketchMerge(this)
 
+  def quantilesDoubles: QuantilesDoublesSketchAgg = AggregationOps.quantilesDoubles(this)
+
   /**
     * Aggregation to compute the estimated cardinality of a dimension that
     * has been aggregated as a "hyperUnique" metric at indexing time.

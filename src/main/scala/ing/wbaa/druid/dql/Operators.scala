@@ -79,10 +79,14 @@ trait AggregationOps {
   def thetaSketch(dim: Dim): ThetaSketchAgg        = thetaSketch(dim.name)
 
   def hllSketchBuild(dimName: String): HLLSketchBuildAgg = HLLSketchBuildAgg(dimName)
-  def hllSketchBuild(dim: Dim): HLLSketchBuildAgg        = HLLSketchBuildAgg(dim.name)
+  def hllSketchBuild(dim: Dim): HLLSketchBuildAgg        = hllSketchBuild(dim.name)
 
   def hllSketchMerge(dimName: String): HLLSketchMergeAgg = HLLSketchMergeAgg(dimName)
-  def hllSketchMerge(dim: Dim): HLLSketchMergeAgg        = HLLSketchMergeAgg(dim.name)
+  def hllSketchMerge(dim: Dim): HLLSketchMergeAgg        = hllSketchMerge(dim.name)
+
+  def quantilesDoubles(dimName: String): QuantilesDoublesSketchAgg =
+    QuantilesDoublesSketchAgg(dimName)
+  def quantilesDoubles(dim: Dim): QuantilesDoublesSketchAgg = quantilesDoubles(dim.name)
 
   def hyperUnique(dimName: String): HyperUniqueAgg = HyperUniqueAgg(dimName)
 
