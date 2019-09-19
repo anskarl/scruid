@@ -27,16 +27,20 @@ import io.circe.syntax._
 
 sealed trait PostAggregationType extends Enum with CamelCaseEnumStringEncoder
 object PostAggregationType extends EnumCodec[PostAggregationType] {
-  case object Arithmetic             extends PostAggregationType
-  case object FieldAccess            extends PostAggregationType
-  case object FinalizingFieldAccess  extends PostAggregationType
-  case object Constant               extends PostAggregationType
-  case object DoubleGreatest         extends PostAggregationType
-  case object LongGreatest           extends PostAggregationType
-  case object DoubleLeast            extends PostAggregationType
-  case object LongLeast              extends PostAggregationType
-  case object Javascript             extends PostAggregationType
-  case object HyperUniqueCardinality extends PostAggregationType
+  case object Arithmetic                        extends PostAggregationType
+  case object FieldAccess                       extends PostAggregationType
+  case object FinalizingFieldAccess             extends PostAggregationType
+  case object Constant                          extends PostAggregationType
+  case object DoubleGreatest                    extends PostAggregationType
+  case object LongGreatest                      extends PostAggregationType
+  case object DoubleLeast                       extends PostAggregationType
+  case object LongLeast                         extends PostAggregationType
+  case object Javascript                        extends PostAggregationType
+  case object HyperUniqueCardinality            extends PostAggregationType
+  case object QuantilesDoublesSketchToQuantile  extends PostAggregationType
+  case object QuantilesDoublesSketchToQuantiles extends PostAggregationType
+  case object QuantilesDoublesSketchToHistogram extends PostAggregationType
+  case object QuantilesDoublesSketchToString    extends PostAggregationType
 
   override val values: Set[PostAggregationType] = sealerate.values[PostAggregationType]
 }
@@ -158,6 +162,30 @@ case class HyperUniqueCardinalityPostAggregation(name: String, fieldName: String
   override val `type` = PostAggregationType.HyperUniqueCardinality
 }
 
+case class QuantilePostAggregation(name: String, field: PostAggregation, fraction: Double)
+    extends PostAggregation {
+  override val `type` = PostAggregationType.QuantilesDoublesSketchToQuantile
+}
+
+case class QuantilesPostAggregation(name: String,
+                                    field: PostAggregation,
+                                    fractions: Iterable[Double])
+    extends PostAggregation {
+  override val `type` = PostAggregationType.QuantilesDoublesSketchToQuantiles
+}
+
+case class HistogramPostAggregation(name: String,
+                                    field: PostAggregation,
+                                    splitPoints: Iterable[Double])
+    extends PostAggregation {
+  override val `type` = PostAggregationType.QuantilesDoublesSketchToQuantiles
+}
+
+case class SketchSummaryPostAggregation(name: String, field: PostAggregation)
+    extends PostAggregation {
+  override val `type` = PostAggregationType.QuantilesDoublesSketchToString
+}
+
 object PostAggregation {
   implicit val encoder: Encoder[PostAggregation] = new Encoder[PostAggregation] {
     override def apply(pa: PostAggregation) =
@@ -172,6 +200,10 @@ object PostAggregation {
         case x: LongLeastPostAggregation              => x.asJsonObject
         case x: JavascriptPostAggregation             => x.asJsonObject
         case x: HyperUniqueCardinalityPostAggregation => x.asJsonObject
+        case x: QuantilePostAggregation               => x.asJsonObject
+        case x: QuantilesPostAggregation              => x.asJsonObject
+        case x: HistogramPostAggregation              => x.asJsonObject
+        case x: SketchSummaryPostAggregation          => x.asJsonObject
       }).add("type", pa.`type`.asJson).asJson
   }
 }

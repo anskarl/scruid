@@ -377,6 +377,35 @@ final case class QuantilesDoublesSketchAgg(
   override def alias(name: String): QuantilesDoublesSketchAgg = copy(name = Option(name))
 
   override def getName: String = name.getOrElse(s"quantiles_doubles_$fieldName")
+
+  def set(kappa: Int): QuantilesDoublesSketchAgg = copy(k = kappa)
+}
+
+final case class ArrayOfDoublesSketchAgg(
+    fieldName: String,
+    name: Option[String] = None,
+    nominalEntries: Int = 16384,
+    numberOfValues: Int = 1,
+    metricColumns: Iterable[String] = Iterable.empty
+) extends AggregationExpression {
+
+  override protected[dql] def build(): Aggregation =
+    ArrayOfDoublesSketchAggregation(this.getName, fieldName)
+
+  override def alias(name: String): ArrayOfDoublesSketchAgg = copy(name = Option(name))
+
+  override def getName: String = name.getOrElse(s"quantiles_doubles_$fieldName")
+
+  def nominalEntries(v: Int): ArrayOfDoublesSketchAgg             = copy(nominalEntries = v)
+  def numberOfValues(v: Int): ArrayOfDoublesSketchAgg             = copy(numberOfValues = v)
+  def metricColumns(v: Iterable[String]): ArrayOfDoublesSketchAgg = copy(metricColumns = v)
+
+  def set(nominalEntries: Int = 16384,
+          numberOfValues: Int = 1,
+          metricColumns: Iterable[String]): ArrayOfDoublesSketchAgg =
+    copy(nominalEntries = nominalEntries,
+         numberOfValues = numberOfValues,
+         metricColumns = metricColumns)
 }
 
 final case class CardinalityAgg(fields: Seq[Dim],

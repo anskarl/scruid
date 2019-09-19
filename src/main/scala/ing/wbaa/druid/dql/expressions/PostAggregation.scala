@@ -19,14 +19,16 @@ package ing.wbaa.druid.dql.expressions
 
 import ing.wbaa.druid.definitions._
 
-sealed trait PostAggregatorExpression extends Named[PostAggregatorExpression] {
-  private[dql] def build(complexAggNames: Set[String]): PostAggregation
+sealed trait AnyPostAggregatorExpression[T <: AnyPostAggregatorExpression[T]] extends Named[T] {
+  protected[dql] def build(complexAggNames: Set[String]): PostAggregation
 }
+
+sealed trait PostAggregatorExpression extends AnyPostAggregatorExpression[PostAggregatorExpression]
 
 class FieldAccessPostAgg(fieldName: String, name: Option[String] = None)
     extends PostAggregatorExpression {
 
-  override private[dql] def build(complexAggNames: Set[String]): PostAggregation =
+  override protected[dql] def build(complexAggNames: Set[String]): PostAggregation =
     if (complexAggNames.contains(fieldName)) FieldAccessPostAggregation(fieldName, name)
     else FieldAccessPostAggregation(fieldName, name)
 
@@ -38,7 +40,7 @@ class FieldAccessPostAgg(fieldName: String, name: Option[String] = None)
 
 class ConstantPostAgg(value: Double, name: Option[String] = None) extends PostAggregatorExpression {
 
-  override private[dql] def build(complexAggNames: Set[String]): PostAggregation =
+  override protected[dql] def build(complexAggNames: Set[String]): PostAggregation =
     ConstantPostAggregation(value, name)
 
   override def alias(name: String): PostAggregatorExpression =
@@ -47,9 +49,8 @@ class ConstantPostAgg(value: Double, name: Option[String] = None) extends PostAg
   override def getName: String = name.getOrElse("c_" + value)
 }
 
-sealed trait PostAggregationExpression extends Named[PostAggregationExpression] {
-  protected[dql] def build(complexAggNames: Set[String]): PostAggregation
-}
+sealed trait PostAggregationExpression
+    extends AnyPostAggregatorExpression[PostAggregationExpression]
 
 case class ArithmeticPostAgg(leftField: PostAggregatorExpression,
                              rightField: PostAggregatorExpression,
@@ -98,4 +99,55 @@ case class JavascriptPostAgg(fieldNames: Seq[String], function: String, name: Op
   override def alias(name: String): PostAggregationExpression = copy(name = Option(name))
 
   override def getName: String = name.getOrElse(s"post_${fieldNames.mkString("_")}")
+}
+
+case class QuantilePostAgg[T <: AnyPostAggregatorExpression[T]](
+    field: AnyPostAggregatorExpression[T],
+    fraction: Double,
+    name: Option[String] = None
+) extends PostAggregationExpression {
+  override protected[dql] def build(complexAggNames: Set[String]): PostAggregation =
+    QuantilePostAggregation(this.getName, field.build(complexAggNames), fraction)
+
+  override def alias(name: String): PostAggregationExpression = copy(name = Option(name))
+
+  override def getName: String = name.getOrElse(s"post_quantile")
+}
+
+case class QuantilesPostAgg[T <: AnyPostAggregatorExpression[T]](
+    field: AnyPostAggregatorExpression[T],
+    fractions: Iterable[Double],
+    name: Option[String] = None
+) extends PostAggregationExpression {
+  override protected[dql] def build(complexAggNames: Set[String]): PostAggregation =
+    QuantilesPostAggregation(this.getName, field.build(complexAggNames), fractions)
+
+  override def alias(name: String): PostAggregationExpression = copy(name = Option(name))
+
+  override def getName: String = name.getOrElse(s"post_quantiles")
+}
+
+case class HistogramPostAgg[T <: AnyPostAggregatorExpression[T]](
+    field: AnyPostAggregatorExpression[T],
+    splitPoints: Iterable[Double],
+    name: Option[String] = None
+) extends PostAggregationExpression {
+  override protected[dql] def build(complexAggNames: Set[String]): PostAggregation =
+    HistogramPostAggregation(this.getName, field.build(complexAggNames), splitPoints)
+
+  override def alias(name: String): PostAggregationExpression = copy(name = Option(name))
+
+  override def getName: String = name.getOrElse(s"post_histogram")
+}
+
+case class SketchSummaryPostAgg[T <: AnyPostAggregatorExpression[T]](
+    field: AnyPostAggregatorExpression[T],
+    name: Option[String] = None
+) extends PostAggregationExpression {
+  override protected[dql] def build(complexAggNames: Set[String]): PostAggregation =
+    SketchSummaryPostAggregation(this.getName, field.build(complexAggNames))
+
+  override def alias(name: String): PostAggregationExpression = copy(name = Option(name))
+
+  override def getName: String = name.getOrElse(s"post_sketch_summary")
 }

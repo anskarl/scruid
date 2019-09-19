@@ -49,6 +49,7 @@ object AggregationType extends EnumCodec[AggregationType] {
   case object HLLSketchBuild         extends AggregationType
   case object HLLSketchMerge         extends AggregationType
   case object QuantilesDoublesSketch extends AggregationType
+  case object ArrayOfDoublesSketch   extends AggregationType
   case object HyperUnique            extends AggregationType
   case object Cardinality            extends AggregationType
   case object Filtered               extends AggregationType
@@ -102,6 +103,7 @@ object SingleFieldAggregation {
       case x: HLLSketchBuildAggregation         => x.asJson
       case x: HLLSketchMergeAggregation         => x.asJson
       case x: QuantilesDoublesSketchAggregation => x.asJson
+      case x: ArrayOfDoublesSketchAggregation   => x.asJson
       case x: HyperUniqueAggregation            => x.asJson
     }
   }
@@ -225,6 +227,16 @@ case class QuantilesDoublesSketchAggregation(
     k: Int = 128
 ) extends SingleFieldAggregation {
   val `type` = AggregationType.QuantilesDoublesSketch
+}
+
+case class ArrayOfDoublesSketchAggregation(
+    name: String,
+    fieldName: String,
+    nominalEntries: Int = 16384,
+    numberOfValues: Int = 1,
+    metricColumns: Iterable[String] = Iterable.empty
+) extends SingleFieldAggregation {
+  val `type` = AggregationType.ArrayOfDoublesSketch
 }
 
 case class CardinalityAggregation(

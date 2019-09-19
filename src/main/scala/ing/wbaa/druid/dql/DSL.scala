@@ -98,4 +98,24 @@ object DSL
       arithmeticPostAgg(s, ArithmeticFunction.QUOT)
 
   }
+
+  implicit class AnyPostAggregatorExpressionOps[T <: AnyPostAggregatorExpression[T]](
+      val postAggExpr: AnyPostAggregatorExpression[T]
+  ) extends AnyVal {
+
+    def quantile(fraction: Double): PostAggregationExpression =
+      PostAggregationOps.quantile(postAggExpr, fraction)
+
+    def quantiles(fractions: Double*): PostAggregationExpression =
+      PostAggregationOps.quantiles(postAggExpr, fractions)
+    def quantiles(fractions: Iterable[Double]): PostAggregationExpression =
+      PostAggregationOps.quantiles(postAggExpr, fractions)
+
+    def histogram(splitPoints: Double*): PostAggregationExpression =
+      PostAggregationOps.histogram(postAggExpr, splitPoints)
+    def histogram(splitPoints: Iterable[Double]): PostAggregationExpression =
+      PostAggregationOps.histogram(postAggExpr, splitPoints)
+
+    def sketchSummary: PostAggregationExpression = PostAggregationOps.sketchSummary(postAggExpr)
+  }
 }

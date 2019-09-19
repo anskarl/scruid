@@ -88,9 +88,11 @@ trait AggregationOps {
     QuantilesDoublesSketchAgg(dimName)
   def quantilesDoubles(dim: Dim): QuantilesDoublesSketchAgg = quantilesDoubles(dim.name)
 
-  def hyperUnique(dimName: String): HyperUniqueAgg = HyperUniqueAgg(dimName)
+  def arrayOfDoubles(dimName: String): ArrayOfDoublesSketchAgg = ArrayOfDoublesSketchAgg(dimName)
+  def arrayOfDoubles(dim: Dim): ArrayOfDoublesSketchAgg        = arrayOfDoubles(dim.name)
 
-  def hyperUnique(dim: Dim): HyperUniqueAgg = hyperUnique(dim.name)
+  def hyperUnique(dimName: String): HyperUniqueAgg = HyperUniqueAgg(dimName)
+  def hyperUnique(dim: Dim): HyperUniqueAgg        = hyperUnique(dim.name)
 
   def cardinality(dims: Dim*): CardinalityAgg               = CardinalityAgg(dims)
   def cardinality(name: String, dims: Dim*): CardinalityAgg = CardinalityAgg(dims, Option(name))
@@ -193,6 +195,52 @@ trait PostAggregationOps {
       implicit classTag: ClassTag[Dim]
   ): PostAggregationExpression =
     JavascriptPostAgg(fields.map(_.name).toSeq, function, Option(name))
+
+  def quantile[T <: AnyPostAggregatorExpression[T]](field: AnyPostAggregatorExpression[T],
+                                                    fraction: Double): PostAggregationExpression =
+    QuantilePostAgg(field, fraction)
+
+  def quantile[T <: AnyPostAggregatorExpression[T]](name: String,
+                                                    field: AnyPostAggregatorExpression[T],
+                                                    fraction: Double): PostAggregationExpression =
+    QuantilePostAgg(field, fraction, Option(name))
+
+  def quantiles[T <: AnyPostAggregatorExpression[T]](
+      field: AnyPostAggregatorExpression[T],
+      fractions: Iterable[Double]
+  ): PostAggregationExpression =
+    QuantilesPostAgg(field, fractions)
+
+  def quantiles[T <: AnyPostAggregatorExpression[T]](
+      name: String,
+      field: AnyPostAggregatorExpression[T],
+      fractions: Iterable[Double]
+  ): PostAggregationExpression =
+    QuantilesPostAgg(field, fractions, Option(name))
+
+  def histogram[T <: AnyPostAggregatorExpression[T]](
+      field: AnyPostAggregatorExpression[T],
+      splitPoints: Iterable[Double]
+  ): PostAggregationExpression =
+    HistogramPostAgg(field, splitPoints)
+
+  def histogram[T <: AnyPostAggregatorExpression[T]](
+      name: String,
+      field: AnyPostAggregatorExpression[T],
+      splitPoints: Iterable[Double]
+  ): PostAggregationExpression =
+    HistogramPostAgg(field, splitPoints, Option(name))
+
+  def sketchSummary[T <: AnyPostAggregatorExpression[T]](
+      field: AnyPostAggregatorExpression[T]
+  ): PostAggregationExpression =
+    SketchSummaryPostAgg(field)
+
+  def sketchSummary[T <: AnyPostAggregatorExpression[T]](
+      name: String,
+      field: AnyPostAggregatorExpression[T]
+  ): PostAggregationExpression =
+    SketchSummaryPostAgg(field, Option(name))
 }
 
 object AggregationOps         extends AggregationOps

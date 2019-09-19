@@ -412,8 +412,9 @@ stringLast('dim_name) as "agg_last"
 DQL supports Druid [`hyperUnique` and `cardinality` aggregators](https://druid.apache.org/docs/latest/querying/hll-old.html), 
 as well as [DataSketches-based](https://datasketches.apache.org/) aggregators such as 
 [`thetaSketch`](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-theta.html), 
-[`hllSketchBuild`, `hllSketchMerge`](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-hll.html) 
-and [`quantilesDoubles`](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-quantiles.html).
+[`hllSketchBuild`, `hllSketchMerge`](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-hll.html),
+[`quantilesDoubles`](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-quantiles.html) and
+[`arrayOfDoubles`](https://druid.apache.org/docs/latest/development/extensions-core/datasketches-tuple.html).
  
 Please note that DataSketches-based require aggregators the `druid-datasketches` extension to be
 [included in Druid server config file](https://druid.apache.org/docs/latest/operations/including-extensions.html).

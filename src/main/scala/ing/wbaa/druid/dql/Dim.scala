@@ -560,11 +560,25 @@ case class Dim private[dql] (name: String,
     */
   def thetaSketch: ThetaSketchAgg = AggregationOps.thetaSketch(this)
 
+  /**
+    * Aggregation to compute HLL Build sketch
+    */
   def hllSketchBuild: HLLSketchBuildAgg = AggregationOps.hllSketchBuild(this)
 
+  /**
+    * Aggregation to compute HLL Merge sketch
+    */
   def hllSketchMerge: HLLSketchMergeAgg = AggregationOps.hllSketchMerge(this)
 
+  /**
+    * Aggregation to compute Quantiles sketch
+    */
   def quantilesDoubles: QuantilesDoublesSketchAgg = AggregationOps.quantilesDoubles(this)
+
+  /**
+    * Aggregation to compute ArrayOfDoubles sketch
+    */
+  def arrayOfDoubles: ArrayOfDoublesSketchAgg = AggregationOps.arrayOfDoubles(this)
 
   /**
     * Aggregation to compute the estimated cardinality of a dimension that
