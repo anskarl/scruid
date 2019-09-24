@@ -141,12 +141,23 @@ trait AggregationOps {
 
   def count: CountAgg = new CountAgg()
 
+  def javascript(fields: Iterable[Dim], fnAggregate: String, fnCombine: String, fnReset: String)(
+      implicit classTag: ClassTag[Dim]
+  ): JavascriptAgg =
+    JavascriptAgg(fields.map(_.name).toSeq, fnAggregate, fnCombine, fnReset)
+
   def javascript(name: String,
                  fields: Iterable[Dim],
                  fnAggregate: String,
                  fnCombine: String,
                  fnReset: String)(implicit classTag: ClassTag[Dim]): JavascriptAgg =
     JavascriptAgg(fields.map(_.name).toSeq, fnAggregate, fnCombine, fnReset, Option(name))
+
+  def javascript(fields: Iterable[String],
+                 fnAggregate: String,
+                 fnCombine: String,
+                 fnReset: String): JavascriptAgg =
+    JavascriptAgg(fields.toSeq, fnAggregate, fnCombine, fnReset)
 
   def javascript(name: String,
                  fields: Iterable[String],
@@ -185,6 +196,9 @@ trait PostAggregationOps {
 
   def hyperUniqueCardinality(dim: Dim): PostAggregationExpression =
     HyperUniqueCardinalityPostAgg(dim.name, dim.outputNameOpt)
+
+  def javascript(fields: Iterable[String], function: String): PostAggregationExpression =
+    JavascriptPostAgg(fields.toSeq, function)
 
   def javascript(name: String,
                  fields: Iterable[String],
