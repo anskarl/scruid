@@ -17,7 +17,7 @@
 
 package ing.wbaa.druid.dql
 
-import ing.wbaa.druid.definitions.ArithmeticFunction
+import ing.wbaa.druid.definitions.{ ArithmeticFunction, ThetaSketchField, ThetaSketchOperationType }
 import ing.wbaa.druid.dql.expressions._
 
 import scala.language.implicitConversions
@@ -117,5 +117,42 @@ object DSL
       PostAggregationOps.histogram(postAggExpr, splitPoints)
 
     def sketchSummary: PostAggregationExpression = PostAggregationOps.sketchSummary(postAggExpr)
+  }
+
+  implicit class ThetaSketchFieldOps[T <: ThetaSketchField](val sketchField: T) extends AnyVal {
+
+    def thetaSketchEstimate: ThetaSketchEstimatePostAgg =
+      PostAggregationOps.thetaSketchEstimate(sketchField)
+
+    def thetaSketchEstimate(name: String): ThetaSketchEstimatePostAgg =
+      PostAggregationOps.thetaSketchEstimate(name, sketchField)
+
+    def thetaSketchSummary: ThetaSketchSummaryPostAgg =
+      ThetaSketchSummaryPostAgg(sketchField)
+
+    def thetaSketchSummary(name: String): ThetaSketchSummaryPostAgg =
+      ThetaSketchSummaryPostAgg(sketchField, Option(name))
+  }
+
+  object ThetaSketch {
+
+    def union[T <: ThetaSketchField](fileds: Iterable[T]): ThetaSketchSetOpPostAgg =
+      ThetaSketchSetOpPostAgg(ThetaSketchOperationType.Union, fileds)
+
+    def intersect[T <: ThetaSketchField](fileds: Iterable[T]): ThetaSketchSetOpPostAgg =
+      ThetaSketchSetOpPostAgg(ThetaSketchOperationType.Intersect, fileds)
+
+    def not[T <: ThetaSketchField](fileds: Iterable[T]): ThetaSketchSetOpPostAgg =
+      ThetaSketchSetOpPostAgg(ThetaSketchOperationType.Not, fileds)
+
+    def union[T <: ThetaSketchField](name: String, fileds: Iterable[T]): ThetaSketchSetOpPostAgg =
+      ThetaSketchSetOpPostAgg(ThetaSketchOperationType.Union, fileds, Option(name))
+
+    def intersect[T <: ThetaSketchField](name: String,
+                                         fileds: Iterable[T]): ThetaSketchSetOpPostAgg =
+      ThetaSketchSetOpPostAgg(ThetaSketchOperationType.Intersect, fileds, Option(name))
+
+    def not[T <: ThetaSketchField](name: String, fileds: Iterable[T]): ThetaSketchSetOpPostAgg =
+      ThetaSketchSetOpPostAgg(ThetaSketchOperationType.Not, fileds, Option(name))
   }
 }

@@ -17,7 +17,12 @@
 
 package ing.wbaa.druid.dql
 
-import ing.wbaa.druid.definitions.{ ExtractionFn, Filter }
+import ing.wbaa.druid.definitions.{
+  ExtractionFn,
+  Filter,
+  ThetaSketchField,
+  ThetaSketchOperationType
+}
 import ing.wbaa.druid.dql.expressions._
 
 import scala.reflect.ClassTag
@@ -209,6 +214,27 @@ trait PostAggregationOps {
       implicit classTag: ClassTag[Dim]
   ): PostAggregationExpression =
     JavascriptPostAgg(fields.map(_.name).toSeq, function, Option(name))
+
+  def thetaSketchEstimate(field: ThetaSketchField): ThetaSketchEstimatePostAgg =
+    ThetaSketchEstimatePostAgg(field)
+
+  def thetaSketchEstimate(name: String, field: ThetaSketchField): ThetaSketchEstimatePostAgg =
+    ThetaSketchEstimatePostAgg(field, Option(name))
+
+  def thetaSketchSetOp(name: String,
+                       func: ThetaSketchOperationType,
+                       fields: Iterable[ThetaSketchField]): ThetaSketchSetOpPostAgg =
+    ThetaSketchSetOpPostAgg(func, fields, Option(name))
+
+  def thetaSketchSetOp(func: ThetaSketchOperationType,
+                       fields: Iterable[ThetaSketchField]): ThetaSketchSetOpPostAgg =
+    ThetaSketchSetOpPostAgg(func, fields)
+
+  def thetaSketchSummary(name: String, field: ThetaSketchField): ThetaSketchSummaryPostAgg =
+    ThetaSketchSummaryPostAgg(field, Option(name))
+
+  def thetaSketchSummary(field: ThetaSketchField): ThetaSketchSummaryPostAgg =
+    ThetaSketchSummaryPostAgg(field)
 
   def quantile[T <: AnyPostAggregatorExpression[T]](field: AnyPostAggregatorExpression[T],
                                                     fraction: Double): PostAggregationExpression =
