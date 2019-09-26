@@ -37,6 +37,9 @@ object PostAggregationType extends EnumCodec[PostAggregationType] {
   case object LongLeast                         extends PostAggregationType
   case object Javascript                        extends PostAggregationType
   case object HyperUniqueCardinality            extends PostAggregationType
+  case object ThetaSketchEstimate               extends PostAggregationType
+  case object ThetaSketchSetOp                  extends PostAggregationType
+  case object ThetaSketchToString               extends PostAggregationType
   case object QuantilesDoublesSketchToQuantile  extends PostAggregationType
   case object QuantilesDoublesSketchToQuantiles extends PostAggregationType
   case object QuantilesDoublesSketchToHistogram extends PostAggregationType
@@ -65,6 +68,7 @@ object Ordering {
 sealed trait ArithmeticFunction {
   val value: String
 }
+
 object ArithmeticFunction {
   case object PLUS extends ArithmeticFunction {
     override val value = "+"
@@ -87,6 +91,9 @@ object ArithmeticFunction {
   }
 }
 
+sealed trait ThetaSketchField { self: PostAggregation =>
+}
+
 case class ArithmeticPostAggregation(
     name: String,
     fn: ArithmeticFunction,
@@ -103,7 +110,8 @@ case class ArithmeticPostAggregation(
 case class FieldAccessPostAggregation(
     fieldName: String,
     name: Option[String] = None
-) extends PostAggregation {
+) extends PostAggregation
+    with ThetaSketchField {
   override val `type` = PostAggregationType.FieldAccess
 }
 
@@ -162,6 +170,35 @@ case class HyperUniqueCardinalityPostAggregation(name: String, fieldName: String
   override val `type` = PostAggregationType.HyperUniqueCardinality
 }
 
+case class ThetaSketchEstimatePostAggregation(name: String, field: ThetaSketchField)
+    extends PostAggregation {
+  override val `type` = PostAggregationType.ThetaSketchEstimate
+}
+
+sealed trait ThetaSketchOperationType extends Enum with UpperCaseEnumStringEncoder
+object ThetaSketchOperationType extends EnumCodec[ThetaSketchOperationType] {
+
+  case object Union     extends ThetaSketchOperationType
+  case object Intersect extends ThetaSketchOperationType
+  case object Not       extends ThetaSketchOperationType
+
+  override val values: Set[ThetaSketchOperationType] = sealerate.values[ThetaSketchOperationType]
+}
+
+case class ThetaSketchSetOpPostAggregation(name: String,
+                                           func: ThetaSketchOperationType,
+                                           fields: Iterable[ThetaSketchField],
+                                           size: Int = 16384)
+    extends PostAggregation
+    with ThetaSketchField {
+  override val `type` = PostAggregationType.ThetaSketchSetOp
+}
+
+case class ThetaSketchSummaryPostAggregation(name: String, field: ThetaSketchField)
+    extends PostAggregation {
+  override val `type` = PostAggregationType.ThetaSketchToString
+}
+
 case class QuantilePostAggregation(name: String, field: PostAggregation, fraction: Double)
     extends PostAggregation {
   override val `type` = PostAggregationType.QuantilesDoublesSketchToQuantile
@@ -181,7 +218,7 @@ case class HistogramPostAggregation(name: String,
   override val `type` = PostAggregationType.QuantilesDoublesSketchToQuantiles
 }
 
-case class SketchSummaryPostAggregation(name: String, field: PostAggregation)
+case class QuantilesSummaryPostAggregation(name: String, field: PostAggregation)
     extends PostAggregation {
   override val `type` = PostAggregationType.QuantilesDoublesSketchToString
 }
@@ -200,10 +237,13 @@ object PostAggregation {
         case x: LongLeastPostAggregation              => x.asJsonObject
         case x: JavascriptPostAggregation             => x.asJsonObject
         case x: HyperUniqueCardinalityPostAggregation => x.asJsonObject
+        case x: ThetaSketchEstimatePostAggregation    => x.asJsonObject
+        case x: ThetaSketchSetOpPostAggregation       => x.asJsonObject
+        case x: ThetaSketchSummaryPostAggregation     => x.asJsonObject
         case x: QuantilePostAggregation               => x.asJsonObject
         case x: QuantilesPostAggregation              => x.asJsonObject
         case x: HistogramPostAggregation              => x.asJsonObject
-        case x: SketchSummaryPostAggregation          => x.asJsonObject
+        case x: QuantilesSummaryPostAggregation       => x.asJsonObject
       }).add("type", pa.`type`.asJson).asJson
   }
 }
