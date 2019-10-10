@@ -22,6 +22,8 @@ import ing.wbaa.druid.dql.Dim.DimType
 import ing.wbaa.druid.dql.expressions._
 import ing.wbaa.druid.{ DimensionOrder, DimensionOrderType, Direction, OrderByColumnSpec }
 
+import scala.reflect.ClassTag
+
 /**
   * This class represents a single dimension in a Druid datasource, along with all operations that can be
   * performed in a query (e.g., filtering, aggregation, post-aggregation, etc.).
@@ -573,7 +575,7 @@ case class Dim private[dql] (name: String,
   /**
     * Aggregation to compute Quantiles sketch
     */
-  def quantilesDoubles: QuantilesDoublesSketchAgg = AggregationOps.quantilesDoubles(this)
+  def quantilesDoubles: QuantilesDoublesSketchAgg = AggregationOps.quantilesDoublesSketch(this)
 
   /**
     * Aggregation to compute ArrayOfDoubles sketch
@@ -693,6 +695,54 @@ case class Dim private[dql] (name: String,
     */
   def hyperUniqueCardinality: HyperUniqueCardinalityPostAgg =
     HyperUniqueCardinalityPostAgg(this.name)
+
+  /**
+    * Theta-sketch estimate post-aggregator over this dimension
+    */
+  def thetaSketchEstimate: ThetaSketchEstimatePostAgg =
+    PostAggregationOps.thetaSketchEstimate(FieldAccessPostAggregation(this.name))
+
+  /**
+    * Theta-sketch set operator post-aggregator
+    */
+  def thetaSketchOp(func: ThetaSketchOperationType,
+                    dims: Iterable[Dim]): ThetaSketchSetOpPostAgg = {
+    val fields = dims.foldLeft(List(FieldAccessPostAggregation(this.name)))(
+      (acc, dim) => FieldAccessPostAggregation(dim.name) :: acc
+    )
+    PostAggregationOps.thetaSketchSetOp(func, fields)
+  }
+
+  def thetaSketchOp(func: ThetaSketchOperationType, fields: Iterable[ThetaSketchField])(
+      implicit classTag: ClassTag[ThetaSketchField]
+  ): ThetaSketchSetOpPostAgg =
+    PostAggregationOps.thetaSketchSetOp(func, fields)
+
+  def quantile(fraction: Double): PostAggregationExpression =
+    PostAggregationOps.quantile(new FieldAccessPostAgg(this.name), fraction)
+
+  def quantiles(
+      fractions: Iterable[Double]
+  ): PostAggregationExpression =
+    PostAggregationOps.quantiles(new FieldAccessPostAgg(this.name), fractions)
+
+  def histogram(
+      splitPoints: Iterable[Double]
+  ): PostAggregationExpression =
+    PostAggregationOps.histogram(new FieldAccessPostAgg(this.name), splitPoints)
+
+  def quantilesSketchRank(value: Double): PostAggregationExpression =
+    PostAggregationOps.quantilesSketchRank(new FieldAccessPostAgg(this.name), value)
+
+  def quantilesSketchCDF(splitPoints: Iterable[Double]): PostAggregationExpression =
+    PostAggregationOps.quantilesSketchCDF(new FieldAccessPostAgg(this.name), splitPoints)
+
+  def quantilesSketchCDF(splitPoints: Double*): PostAggregationExpression =
+    PostAggregationOps.quantilesSketchCDF(new FieldAccessPostAgg(this.name), splitPoints)
+
+  def quantilesSketchSummary: PostAggregationExpression =
+    QuantilesSketchSummaryPostAgg(new FieldAccessPostAgg(this.name))
+
 }
 
 object Dim {

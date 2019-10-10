@@ -116,7 +116,17 @@ object DSL
     def histogram(splitPoints: Iterable[Double]): PostAggregationExpression =
       PostAggregationOps.histogram(postAggExpr, splitPoints)
 
-    def sketchSummary: PostAggregationExpression = PostAggregationOps.sketchSummary(postAggExpr)
+    def quantilesSketchRank(value: Double): PostAggregationExpression =
+      PostAggregationOps.quantilesSketchRank(postAggExpr, value)
+
+    def quantilesSketchCDF(splitPoints: Double*): PostAggregationExpression =
+      PostAggregationOps.quantilesSketchCDF(postAggExpr, splitPoints)
+
+    def quantilesSketchCDF(splitPoints: Iterable[Double]): PostAggregationExpression =
+      PostAggregationOps.quantilesSketchCDF(postAggExpr, splitPoints)
+
+    def sketchSummary: PostAggregationExpression =
+      PostAggregationOps.quantilesSketchSummary(postAggExpr)
   }
 
   implicit class ThetaSketchFieldOps[T <: ThetaSketchField](val sketchField: T) extends AnyVal {

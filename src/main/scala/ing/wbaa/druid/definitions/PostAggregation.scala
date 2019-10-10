@@ -43,6 +43,8 @@ object PostAggregationType extends EnumCodec[PostAggregationType] {
   case object QuantilesDoublesSketchToQuantile  extends PostAggregationType
   case object QuantilesDoublesSketchToQuantiles extends PostAggregationType
   case object QuantilesDoublesSketchToHistogram extends PostAggregationType
+  case object QuantilesDoublesSketchToRank      extends PostAggregationType
+  case object QuantilesDoublesSketchToCDF       extends PostAggregationType
   case object QuantilesDoublesSketchToString    extends PostAggregationType
 
   override val values: Set[PostAggregationType] = sealerate.values[PostAggregationType]
@@ -215,7 +217,21 @@ case class HistogramPostAggregation(name: String,
                                     field: PostAggregation,
                                     splitPoints: Iterable[Double])
     extends PostAggregation {
-  override val `type` = PostAggregationType.QuantilesDoublesSketchToQuantiles
+  override val `type` = PostAggregationType.QuantilesDoublesSketchToHistogram
+}
+
+case class QuantilesDoublesSketchToRankPostAggregation(name: String,
+                                                       field: PostAggregation,
+                                                       value: Double)
+    extends PostAggregation {
+  override val `type` = PostAggregationType.QuantilesDoublesSketchToRank
+}
+
+case class QuantilesDoublesSketchToCDFPostAggregation(name: String,
+                                                      field: PostAggregation,
+                                                      splitPoints: Iterable[Double])
+    extends PostAggregation {
+  override val `type` = PostAggregationType.QuantilesDoublesSketchToCDF
 }
 
 case class QuantilesSummaryPostAggregation(name: String, field: PostAggregation)
@@ -227,23 +243,25 @@ object PostAggregation {
   implicit val encoder: Encoder[PostAggregation] = new Encoder[PostAggregation] {
     override def apply(pa: PostAggregation) =
       (pa match {
-        case x: ArithmeticPostAggregation             => x.asJsonObject
-        case x: FieldAccessPostAggregation            => x.asJsonObject
-        case x: FinalizingFieldAccessPostAggregation  => x.asJsonObject
-        case x: ConstantPostAggregation               => x.asJsonObject
-        case x: DoubleGreatestPostAggregation         => x.asJsonObject
-        case x: LongGreatestPostAggregation           => x.asJsonObject
-        case x: DoubleLeastPostAggregation            => x.asJsonObject
-        case x: LongLeastPostAggregation              => x.asJsonObject
-        case x: JavascriptPostAggregation             => x.asJsonObject
-        case x: HyperUniqueCardinalityPostAggregation => x.asJsonObject
-        case x: ThetaSketchEstimatePostAggregation    => x.asJsonObject
-        case x: ThetaSketchSetOpPostAggregation       => x.asJsonObject
-        case x: ThetaSketchSummaryPostAggregation     => x.asJsonObject
-        case x: QuantilePostAggregation               => x.asJsonObject
-        case x: QuantilesPostAggregation              => x.asJsonObject
-        case x: HistogramPostAggregation              => x.asJsonObject
-        case x: QuantilesSummaryPostAggregation       => x.asJsonObject
+        case x: ArithmeticPostAggregation                   => x.asJsonObject
+        case x: FieldAccessPostAggregation                  => x.asJsonObject
+        case x: FinalizingFieldAccessPostAggregation        => x.asJsonObject
+        case x: ConstantPostAggregation                     => x.asJsonObject
+        case x: DoubleGreatestPostAggregation               => x.asJsonObject
+        case x: LongGreatestPostAggregation                 => x.asJsonObject
+        case x: DoubleLeastPostAggregation                  => x.asJsonObject
+        case x: LongLeastPostAggregation                    => x.asJsonObject
+        case x: JavascriptPostAggregation                   => x.asJsonObject
+        case x: HyperUniqueCardinalityPostAggregation       => x.asJsonObject
+        case x: ThetaSketchEstimatePostAggregation          => x.asJsonObject
+        case x: ThetaSketchSetOpPostAggregation             => x.asJsonObject
+        case x: ThetaSketchSummaryPostAggregation           => x.asJsonObject
+        case x: QuantilePostAggregation                     => x.asJsonObject
+        case x: QuantilesPostAggregation                    => x.asJsonObject
+        case x: HistogramPostAggregation                    => x.asJsonObject
+        case x: HistogramPostAggregation                    => x.asJsonObject
+        case x: QuantilesDoublesSketchToRankPostAggregation => x.asJsonObject
+        case x: QuantilesDoublesSketchToCDFPostAggregation  => x.asJsonObject
       }).add("type", pa.`type`.asJson).asJson
   }
 }

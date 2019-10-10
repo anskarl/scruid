@@ -89,9 +89,10 @@ trait AggregationOps {
   def hllSketchMerge(dimName: String): HLLSketchMergeAgg = HLLSketchMergeAgg(dimName)
   def hllSketchMerge(dim: Dim): HLLSketchMergeAgg        = hllSketchMerge(dim.name)
 
-  def quantilesDoubles(dimName: String): QuantilesDoublesSketchAgg =
+  def quantilesDoublesSketch(dimName: String): QuantilesDoublesSketchAgg =
     QuantilesDoublesSketchAgg(dimName)
-  def quantilesDoubles(dim: Dim): QuantilesDoublesSketchAgg = quantilesDoubles(dim.name)
+
+  def quantilesDoublesSketch(dim: Dim): QuantilesDoublesSketchAgg = quantilesDoublesSketch(dim.name)
 
   def arrayOfDoubles(dimName: String): ArrayOfDoublesSketchAgg = ArrayOfDoublesSketchAgg(dimName)
   def arrayOfDoubles(dim: Dim): ArrayOfDoublesSketchAgg        = arrayOfDoubles(dim.name)
@@ -271,16 +272,28 @@ trait PostAggregationOps {
   ): PostAggregationExpression =
     HistogramPostAgg(field, splitPoints, Option(name))
 
-  def sketchSummary[T <: AnyPostAggregatorExpression[T]](
+  def quantilesSketchRank[T <: AnyPostAggregatorExpression[T]](
+      field: AnyPostAggregatorExpression[T],
+      value: Double
+  ): PostAggregationExpression =
+    QuantilesDoublesSketchToRankPostAgg(field, value)
+
+  def quantilesSketchCDF[T <: AnyPostAggregatorExpression[T]](
+      field: AnyPostAggregatorExpression[T],
+      splitPoints: Iterable[Double]
+  ): PostAggregationExpression =
+    QuantilesDoublesSketchToCDFPostAgg(field, splitPoints)
+
+  def quantilesSketchSummary[T <: AnyPostAggregatorExpression[T]](
       field: AnyPostAggregatorExpression[T]
   ): PostAggregationExpression =
-    SketchSummaryPostAgg(field)
+    QuantilesSketchSummaryPostAgg(field)
 
-  def sketchSummary[T <: AnyPostAggregatorExpression[T]](
+  def quantilesSketchSummary[T <: AnyPostAggregatorExpression[T]](
       name: String,
       field: AnyPostAggregatorExpression[T]
   ): PostAggregationExpression =
-    SketchSummaryPostAgg(field, Option(name))
+    QuantilesSketchSummaryPostAgg(field, Option(name))
 }
 
 object AggregationOps         extends AggregationOps
