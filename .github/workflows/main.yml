@@ -1,6 +1,6 @@
-name: Scruid CI Action
+name: Build project
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
@@ -50,3 +50,4 @@ jobs:
         run: (cd docker; make push)
     env:
       _JAVA_OPTIONS: "-Xms512m -Xmx4g"
+      REPOSITORY_OWNER: ${{ github.repository }}

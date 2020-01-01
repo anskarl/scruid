@@ -5,21 +5,20 @@ CURRENT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 include $(CURRENT_DIR)/../.env
 export
 
-#
-# Constants
-#
 
-# Registry of the docker images --- TODO: should change
-REGISTRY=docker.pkg.github.com/anskarl
+
+# Registry of the docker images
+REGISTRY=docker.pkg.github.com
+REPOSITORY_OWNER ?= ing-bank/scruid
 # Base docker image with openjdk jre
 OPENJDK_IMAGE=openjdk:8-jre-alpine
 
 #
 # Derived tags
 # 
-DRUID_VER_TAG=$(REGISTRY)/scruid/druid:$(DRUID_VERSION)
-OPENRESTY_VER_TAG=$(REGISTRY)/scruid/openresty:$(OPENRESTY_VERSION)-alpine
-CHAOS_PROXY_VER_TAG=$(REGISTRY)/scruid/clusterf-chaos-proxy:$(CHAOS_PROXY_VERSION)
+DRUID_VER_TAG=$(REGISTRY)/$(REPOSITORY_OWNER)/druid:$(DRUID_VERSION)
+OPENRESTY_VER_TAG=$(REGISTRY)/$(REPOSITORY_OWNER)/openresty:$(OPENRESTY_VERSION)-alpine
+CHAOS_PROXY_VER_TAG=$(REGISTRY)/$(REPOSITORY_OWNER)/clusterf-chaos-proxy:$(CHAOS_PROXY_VERSION)
 
 .DEFAULT_GOAL := image
 
