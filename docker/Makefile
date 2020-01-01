@@ -55,6 +55,10 @@ druid-clean:
 	docker rmi $(DRUID_VER_TAG)
 	docker rmi $(DRUID_LATEST_TAG)
 
+druid-pull:
+	@echo "Pulling image with tags '$(DRUID_VER_TAG)' and '$(DRUID_LATEST_TAG)'"
+	docker pull $(DRUID_VER_TAG) && docker pull $(DRUID_LATEST_TAG)
+
 openresty-image:
 	@echo "Creating image with tags '$(OPENRESTY_VER_TAG)' and '$(OPENRESTY_LATEST_TAG)'"
 	docker build \
@@ -72,6 +76,9 @@ openresty-clean:
 	docker rmi $(OPENRESTY_VER_TAG)
 	docker rmi $(OPENRESTY_LATEST_TAG)
 
+openresty-pull:
+	@echo "Pulling image with tags '$(OPENRESTY_VER_TAG)' and '$(OPENRESTY_LATEST_TAG)'"
+	docker pull $(OPENRESTY_VER_TAG) && docker pull $(OPENRESTY_LATEST_TAG)
 
 chaos-proxy-image:
 	@echo "Creating image with tags '$(CHAOS_PROXY_VER_TAG)' and '$(CHAOS_PROXY_LATEST_TAG)'"
@@ -92,9 +99,14 @@ chaos-proxy-clean:
 	docker rmi $(CHAOS_PROXY_VER_TAG)
 	docker rmi $(CHAOS_PROXY_LATEST_TAG)	
 
+chaos-proxy-pull:
+	@echo "Pulling image with tags '$(CHAOS_PROXY_VER_TAG)' and '$(CHAOS_PROXY_LATEST_TAG)'"
+	docker pull $(CHAOS_PROXY_VER_TAG) && docker pull $(CHAOS_PROXY_LATEST_TAG)
 
 image: druid-image openresty-image chaos-proxy-image
 
 push: druid-push openresty-push chaos-proxy-push
 
 clean: druid-clean openresty-clean chaos-proxy-clean
+
+pull: druid-pull openresty-pull chaos-proxy-pull
