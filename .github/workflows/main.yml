@@ -8,7 +8,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
       - name: Set up JDK 1.8
         uses: actions/setup-java@v1
         with:
@@ -29,12 +31,12 @@ jobs:
         run: ./services.sh start
       - name: Wait Druid to become available
         run: wget localhost:8082/status
-      #- name: Build for Scala 2.11
-      #  run: sbt ++2.11.12 compile
+      - name: Build for Scala 2.11
+        run: sbt ++2.11.12 compile
       - name: Build for Scala 2.12
         run: sbt ++2.12.9 compile
-      #- name: Build for Scala 2.13
-      #  run: sbt ++2.13.1 compile
+      - name: Build for Scala 2.13
+        run: sbt ++2.13.1 compile
       - name: Code coverage report (Scala 2.12)
         run: sbt coverage test coverageReport
       - name: Archive code coverage report (Scala 2.12)
