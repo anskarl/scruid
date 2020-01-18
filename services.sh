@@ -3,7 +3,7 @@
 : ${TRY_LOOP:="20"}
 : ${DRUID_HOST:="localhost"}
 : ${DRUID_PORT:="8082"}
-: ${REPOSITORY_OWNER:="${USER}"}
+: ${REPOSITORY_OWNER:="${USER}/scruid"}
 
 set -e
 
