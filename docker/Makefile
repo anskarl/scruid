@@ -9,16 +9,16 @@ export
 
 # Registry of the docker images
 REGISTRY=docker.pkg.github.com
-REPOSITORY_OWNER ?= ing-bank/scruid
+REPOSITORY_OWNER ?= ${USER}
 # Base docker image with openjdk jre
 OPENJDK_IMAGE=openjdk:8-jre-alpine
 
 #
 # Derived tags
 # 
-DRUID_VER_TAG=$(REGISTRY)/$(REPOSITORY_OWNER)/druid:$(DRUID_VERSION)
-OPENRESTY_VER_TAG=$(REGISTRY)/$(REPOSITORY_OWNER)/openresty:$(OPENRESTY_VERSION)-alpine
-CHAOS_PROXY_VER_TAG=$(REGISTRY)/$(REPOSITORY_OWNER)/clusterf-chaos-proxy:$(CHAOS_PROXY_VERSION)
+DRUID_VER_TAG=$(REGISTRY)/$(REPOSITORY_OWNER)/scruid/druid:$(DRUID_VERSION)
+OPENRESTY_VER_TAG=$(REGISTRY)/$(REPOSITORY_OWNER)/scruid/openresty:$(OPENRESTY_VERSION)-alpine
+CHAOS_PROXY_VER_TAG=$(REGISTRY)/$(REPOSITORY_OWNER)/scruid/clusterf-chaos-proxy:$(CHAOS_PROXY_VERSION)
 
 .DEFAULT_GOAL := image
 
