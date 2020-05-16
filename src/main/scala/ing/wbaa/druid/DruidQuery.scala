@@ -67,7 +67,7 @@ object DruidQuery {
 
 sealed trait DruidNativeQuery extends DruidQuery {
 
-  val dataSource: String
+  val dataSource: Datasource
 
 }
 
@@ -142,8 +142,8 @@ case class GroupByQuery(
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidNativeQuery
     with DruidQueryFunctions[DruidResponseSeries] {
-  val queryType          = QueryType.GroupBy
-  val dataSource: String = config.datasource
+  val queryType: QueryType   = QueryType.GroupBy
+  val dataSource: Datasource = config.datasource
 }
 
 case class LimitSpec(limit: Int, columns: Iterable[OrderByColumnSpec]) {
@@ -191,8 +191,8 @@ case class TimeSeriesQuery(
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidNativeQuery
     with DruidQueryFunctions[DruidResponseSeries] {
-  val queryType          = QueryType.Timeseries
-  val dataSource: String = config.datasource
+  val queryType: QueryType   = QueryType.Timeseries
+  val dataSource: Datasource = config.datasource
 }
 
 case class TopNQuery(
@@ -208,8 +208,8 @@ case class TopNQuery(
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidNativeQuery
     with DruidQueryFunctions[DruidResponseSeries] {
-  val queryType          = QueryType.TopN
-  val dataSource: String = config.datasource
+  val queryType: QueryType   = QueryType.TopN
+  val dataSource: Datasource = config.datasource
 
 }
 
@@ -227,9 +227,9 @@ case class ScanQuery private (
     extends DruidNativeQuery
     with DruidQueryFunctions[DruidResponseSeries] {
 
-  val queryType: QueryType = QueryType.Scan
-  val dataSource: String   = config.datasource
-  val resultFormat: String = "list"
+  val queryType: QueryType   = QueryType.Scan
+  val dataSource: Datasource = config.datasource
+  val resultFormat: String   = "list"
 }
 
 object ScanQuery {
@@ -282,8 +282,8 @@ case class SearchQuery(
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidNativeQuery {
 
-  val queryType          = QueryType.Search
-  val dataSource: String = config.datasource
+  val queryType: QueryType   = QueryType.Search
+  val dataSource: Datasource = config.datasource
 
   def execute()(
       implicit config: DruidConfig = DruidConfig.DefaultConfig,
@@ -335,8 +335,8 @@ case class SQLQuery private[druid] (query: String,
     implicit val config: DruidConfig = DruidConfig.DefaultConfig
 ) extends DruidQuery {
 
-  val queryType    = QueryType.SQL
-  val resultFormat = "object"
+  val queryType: QueryType = QueryType.SQL
+  val resultFormat: String = "object"
 
   def execute()(
       implicit config: DruidConfig = DruidConfig.DefaultConfig

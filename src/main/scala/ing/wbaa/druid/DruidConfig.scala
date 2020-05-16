@@ -29,6 +29,7 @@ import scala.reflect.runtime.universe
 import akka.actor.ActorSystem
 import com.typesafe.config.{ Config, ConfigException, ConfigFactory }
 import ing.wbaa.druid.client.{ DruidClient, DruidClientBuilder }
+import ing.wbaa.druid.definitions.{ Datasource, DatasourceTable }
 
 /*
  * Druid API Config Immutable
@@ -37,7 +38,7 @@ class DruidConfig(val hosts: Seq[QueryHost],
                   val secure: Boolean,
                   val url: String,
                   val healthEndpoint: String,
-                  val datasource: String,
+                  val datasource: Datasource,
                   val responseParsingTimeout: FiniteDuration,
                   val clientBackend: Class[_ <: DruidClient],
                   val clientConfig: Config,
@@ -49,7 +50,7 @@ class DruidConfig(val hosts: Seq[QueryHost],
       secure: Boolean = this.secure,
       url: String = this.url,
       healthEndpoint: String = this.healthEndpoint,
-      datasource: String = this.datasource,
+      datasource: Datasource = this.datasource,
       responseParsingTimeout: FiniteDuration = this.responseParsingTimeout,
       clientBackend: Class[_ <: DruidClient] = this.clientBackend,
       clientConfig: Config = this.clientConfig,
@@ -117,7 +118,7 @@ object DruidConfig {
       secure: Boolean = druidConfig.getBoolean("secure"),
       url: String = druidConfig.getString("url"),
       healthEndpoint: String = druidConfig.getString("health-endpoint"),
-      datasource: String = druidConfig.getString("datasource"),
+      datasource: Datasource = DatasourceTable(druidConfig.getString("datasource")),
       responseParsingTimeout: FiniteDuration = druidConfig.getDuration("response-parsing-timeout"),
       clientBackend: Class[_ <: DruidClient] =
         Class.forName(druidConfig.getString("client-backend")).asInstanceOf[Class[DruidClient]],

@@ -30,7 +30,7 @@ import ing.wbaa.druid.dql.expressions._
 private[dql] sealed trait QueryBuilderCommons {
 
   protected var queryContextParams              = Map.empty[QueryContextParam, QueryContextValue]
-  protected var dataSourceOpt                   = Option.empty[String]
+  protected var dataSourceOpt                   = Option.empty[Datasource]
   protected var granularityOpt                  = Option.empty[Granularity]
   protected var aggregations: List[Aggregation] = Nil
 
@@ -56,6 +56,14 @@ private[dql] sealed trait QueryBuilderCommons {
     * Specify the datasource to use, other than the default one in the configuration
     */
   def from(dataSource: String): this.type = {
+    dataSourceOpt = Option(DatasourceTable(dataSource))
+    this
+  }
+
+  /**
+    * Specify the datasource to use, other than the default one in the configuration
+    */
+  def from(dataSource: Datasource): this.type = {
     dataSourceOpt = Option(dataSource)
     this
   }
