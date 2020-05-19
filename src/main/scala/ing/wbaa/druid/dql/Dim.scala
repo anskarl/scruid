@@ -31,7 +31,7 @@ import ing.wbaa.druid.dql.expressions._
   * @param outputTypeOpt The resulting output type
   * @param extractionFnOpt An extraction function to apply in this dimension
   */
-// scalastyle:off number.of.methods
+// scalastyle:off
 case class Dim private[dql] (name: String,
                              outputNameOpt: Option[String] = None,
                              outputTypeOpt: Option[String] = None,
@@ -103,7 +103,7 @@ case class Dim private[dql] (name: String,
     }
 
   // --------------------------------------------------------------------------
-  // --- Functions for creating filtering expressions
+  // --- Functions for creating expressions
   // --------------------------------------------------------------------------
 
   @inline
@@ -119,39 +119,90 @@ case class Dim private[dql] (name: String,
   private def compareWith(other: Dim): FilteringExpression =
     new ColumnComparison(this :: other :: Nil)
 
+  @inline
+  private def expressionEq(value: String): Expression =
+    ExpressionOps.equals(Expr(this.getName), Expr(value))
+
+  @inline
+  private def expressionNotEq(value: String): Expression =
+    ExpressionOps.notEquals(Expr(this.getName), Expr(value))
+
+  @inline
+  private def expressionGt(value: String): Expression =
+    ExpressionOps.greaterThan(Expr(this.getName), Expr(value))
+
+  @inline
+  private def expressionLt(value: String): Expression =
+    ExpressionOps.lessThan(Expr(this.getName), Expr(value))
+
+  @inline
+  private def expressionGtEq(value: String): Expression =
+    ExpressionOps.greaterThanEq(Expr(this.getName), Expr(value))
+
+  @inline
+  private def expressionLtEq(value: String): Expression =
+    ExpressionOps.lessThanEq(Expr(this.getName), Expr(value))
+
+  def unary_!(): Expression = ExpressionOps.not(this.getName)
+  def unary_-(): Expression = ExpressionOps.minus(this.getName)
+
   /**
     * @return column-comparison filtering expression between this and the specified dimensions.
     */
-  def ===(other: Dim): FilteringExpression = compareWith(other)
+  def ===(other: Dim): BaseExpression = BaseExpression(
+    filtering = compareWith(other),
+    expression = expressionEq(other.getName)
+  )
 
   /**
     * @return a filtering expression of value equals (string)
     */
-  def ===(value: String): FilteringExpression = eqVal(value)
+  def ===(value: String): BaseExpression = BaseExpression(
+    filtering = eqVal(value),
+    expression = expressionEq(value)
+  )
 
   /**
     * @return a filtering expression of value equals (numeric)
     */
-  def ===(value: Double): FilteringExpression = eqNumDouble(value)
+  def ===(value: Double): BaseExpression = BaseExpression(
+    filtering = eqNumDouble(value),
+    expression = expressionEq(value.toString)
+  )
 
-  def ===(value: Long): FilteringExpression = eqNumLong(value)
+  def ===(value: Long): BaseExpression = BaseExpression(
+    filtering = eqNumLong(value),
+    expression = expressionEq(value.toString)
+  )
 
   /**
     * @return negated column-comparison filtering expression between this and the specified dimensions.
     */
-  def =!=(other: Dim): FilteringExpression = FilteringExpressionOps.not(compareWith(other))
+  def =!=(other: Dim): BaseExpression = BaseExpression(
+    filtering = FilteringExpressionOps.not(compareWith(other)),
+    expression = expressionNotEq(other.getName)
+  )
 
   /**
     * @return a filtering expression of not equals (string)
     */
-  def =!=(value: String): FilteringExpression = FilteringExpressionOps.not(eqVal(value))
+  def =!=(value: String): BaseExpression = BaseExpression(
+    filtering = FilteringExpressionOps.not(eqVal(value)),
+    expression = expressionNotEq(value)
+  )
 
   /**
     * @return a filtering expression of not equals (numeric)
     */
-  def =!=(value: Double): FilteringExpression = FilteringExpressionOps.not(eqNumDouble(value))
+  def =!=(value: Double): BaseExpression = BaseExpression(
+    filtering = FilteringExpressionOps.not(eqNumDouble(value)),
+    expression = expressionNotEq(value.toString)
+  )
 
-  def =!=(value: Long): FilteringExpression = FilteringExpressionOps.not(eqNumLong(value))
+  def =!=(value: Long): BaseExpression = BaseExpression(
+    filtering = FilteringExpressionOps.not(eqNumLong(value)),
+    expression = expressionNotEq(value.toString)
+  )
 
   /**
     * @return in-filter of this dimension for the specified values
@@ -209,7 +260,12 @@ case class Dim private[dql] (name: String,
     * @return a bound filtering expression, with numeric ordering, specifying that the value of
     *         the dimension should be greater than the given number.
     */
-  def >(value: Double): FilteringExpression = new Gt(this, value)
+  def >(value: Double): BaseExpression = BaseExpression(
+    filtering = new Gt(this, value),
+    expression = expressionGt(value.toString)
+  )
+
+  def >(other: Dim): Expression = expressionGt(other.getName)
 
   /**
     * Filter based on a lower bound of dimension values, using numeric ordering.
@@ -217,7 +273,12 @@ case class Dim private[dql] (name: String,
     * @return a bound filtering expression, with numeric ordering, specifying that the value of
     *         the dimension should be greater than, or equal to the given number.
     */
-  def >=(value: Double): FilteringExpression = new GtEq(this, value)
+  def >=(value: Double): BaseExpression = BaseExpression(
+    filtering = new GtEq(this, value),
+    expression = expressionGtEq(value.toString)
+  )
+
+  def >=(other: Dim): Expression = expressionGtEq(other.getName)
 
   /**
     * Filter based on a strict upper bound of dimension values, using numeric ordering.
@@ -225,7 +286,12 @@ case class Dim private[dql] (name: String,
     * @return a bound filtering expression, with numeric ordering, specifying that the value of
     *         the dimension should be less than the given number.
     */
-  def <(value: Double): FilteringExpression = new Lt(this, value)
+  def <(value: Double): BaseExpression = BaseExpression(
+    filtering = new Lt(this, value),
+    expression = expressionLt(value.toString)
+  )
+
+  def <(other: Dim): Expression = expressionLt(other.getName)
 
   /**
     * Filter based on an upper bound of dimension values, using numeric ordering.
@@ -233,7 +299,12 @@ case class Dim private[dql] (name: String,
     * @return a bound filtering expression, with numeric ordering, specifying that the value of
     *         the dimension should be less than, or equal to the given number.
     */
-  def <=(value: Double): FilteringExpression = new LtEq(this, value)
+  def <=(value: Double): BaseExpression = BaseExpression(
+    filtering = new LtEq(this, value),
+    expression = expressionLtEq(value.toString)
+  )
+
+  def <=(other: Dim): Expression = expressionLtEq(other.getName)
 
   /**
     * Filter on ranges of dimension values, using numeric ordering.
@@ -631,23 +702,41 @@ case class Dim private[dql] (name: String,
   /**
     * Arithmetic addition post-aggregator
     */
-  def +(v: Double): ArithmeticPostAgg = arithmeticAgg(v, ArithmeticFunction.PLUS)
+  def +(value: Double): BaseArithmeticExpression = new BaseArithmeticExpression {
+    override def asArithmeticPostAgg: ArithmeticPostAgg =
+      arithmeticAgg(value, ArithmeticFunction.PLUS)
+    override def asExpression: Expression = ExpressionOps.add(Expr(getName), Expr(value))
+  }
 
   /**
     * Arithmetic subtraction post-aggregator
     */
-  def -(v: Double): ArithmeticPostAgg = arithmeticAgg(v, ArithmeticFunction.MINUS)
+  def -(value: Double): BaseArithmeticExpression = new BaseArithmeticExpression {
+    override def asArithmeticPostAgg: ArithmeticPostAgg =
+      arithmeticAgg(value, ArithmeticFunction.MINUS)
+    override def asExpression: Expression = ExpressionOps.subtract(Expr(getName), Expr(value))
+  }
 
   /**
     * Arithmetic multiplication post-aggregator
     */
-  def *(v: Double): ArithmeticPostAgg = arithmeticAgg(v, ArithmeticFunction.MULT)
+  def *(value: Double): BaseArithmeticExpression = new BaseArithmeticExpression {
+    override def asArithmeticPostAgg: ArithmeticPostAgg =
+      arithmeticAgg(value, ArithmeticFunction.MULT)
+    override def asExpression: Expression = ExpressionOps.multiply(Expr(getName), Expr(value))
+  }
 
   /**
     * Arithmetic division post-aggregator, that always returns 0 when dividing by 0,
     * regardless of the numerator
     */
-  def /(v: Double): ArithmeticPostAgg = arithmeticAgg(v, ArithmeticFunction.DIV)
+  def /(value: Double): BaseArithmeticExpression = new BaseArithmeticExpression {
+    override def asArithmeticPostAgg: ArithmeticPostAgg =
+      arithmeticAgg(value, ArithmeticFunction.DIV)
+    override def asExpression: Expression = ExpressionOps.divide(Expr(getName), Expr(value))
+  }
+
+  def %(value: Double): Expression = ExpressionOps.modulo(Expr(getName), Expr(value))
 
   /**
     * Arithmetic division post-aggregator
@@ -657,23 +746,43 @@ case class Dim private[dql] (name: String,
   /**
     * Arithmetic addition post-aggregator
     */
-  def +(v: Dim): ArithmeticPostAgg = arithmeticFieldAgg(v, ArithmeticFunction.PLUS)
+  def +(other: Dim): BaseArithmeticExpression = new BaseArithmeticExpression {
+    override def asArithmeticPostAgg: ArithmeticPostAgg =
+      arithmeticFieldAgg(other, ArithmeticFunction.PLUS)
+    override def asExpression: Expression = ExpressionOps.add(Expr(getName), Expr(other.getName))
+  }
 
   /**
     * Arithmetic subtraction post-aggregator
     */
-  def -(v: Dim): ArithmeticPostAgg = arithmeticFieldAgg(v, ArithmeticFunction.MINUS)
+  def -(other: Dim): BaseArithmeticExpression = new BaseArithmeticExpression {
+    override def asArithmeticPostAgg: ArithmeticPostAgg =
+      arithmeticFieldAgg(other, ArithmeticFunction.MINUS)
+    override def asExpression: Expression =
+      ExpressionOps.subtract(Expr(getName), Expr(other.getName))
+  }
 
   /**
     * Arithmetic multiplication post-aggregator
     */
-  def *(v: Dim): ArithmeticPostAgg = arithmeticFieldAgg(v, ArithmeticFunction.MULT)
+  def *(other: Dim): BaseArithmeticExpression = new BaseArithmeticExpression {
+    override def asArithmeticPostAgg: ArithmeticPostAgg =
+      arithmeticFieldAgg(other, ArithmeticFunction.MULT)
+    override def asExpression: Expression =
+      ExpressionOps.multiply(Expr(getName), Expr(other.getName))
+  }
 
   /**
     * Arithmetic division post-aggregator, that always returns 0 when dividing by 0,
     * regardless of the numerator
     */
-  def /(v: Dim): ArithmeticPostAgg = arithmeticFieldAgg(v, ArithmeticFunction.DIV)
+  def /(other: Dim): BaseArithmeticExpression = new BaseArithmeticExpression {
+    override def asArithmeticPostAgg: ArithmeticPostAgg =
+      arithmeticFieldAgg(other, ArithmeticFunction.DIV)
+    override def asExpression: Expression = ExpressionOps.divide(Expr(getName), Expr(other.getName))
+  }
+
+  def %(other: Dim): Expression = ExpressionOps.modulo(Expr(getName), Expr(other.getName))
 
   /**
     * Arithmetic division post-aggregator
@@ -686,7 +795,7 @@ case class Dim private[dql] (name: String,
   def hyperUniqueCardinality: HyperUniqueCardinalityPostAgg =
     HyperUniqueCardinalityPostAgg(this.name)
 }
-// scalastyle:on number.of.methods
+// scalastyle:on
 
 object Dim {
 

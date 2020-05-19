@@ -19,9 +19,11 @@ package ing.wbaa.druid.definitions
 
 import ca.mrvisser.sealerate
 import ing.wbaa.druid._
+import ing.wbaa.druid.dql.expressions.Expression
 import io.circe._
 import io.circe.generic.auto._
 import io.circe.syntax._
+import scala.reflect.ClassTag
 
 sealed trait DatasourceType extends Enum with LowerCaseEnumStringEncoder
 object DatasourceType extends EnumCodec[DatasourceType] {
@@ -44,36 +46,53 @@ object Datasource {
   implicit val encoder: Encoder[Datasource] = new Encoder[Datasource] {
     override def apply(datasource: Datasource): Json =
       (datasource match {
-        case d: DatasourceTable  => d.asJsonObject
-        case d: DatasourceLookup => d.asJsonObject
-        case d: DatasourceUnion  => d.asJsonObject
-        case d: DatasourceInline => d.asJsonObject
-        case d: DatasourceQuery  => d.asJsonObject
-        case d: DatasourceJoin   => d.asJsonObject
+        case d: Table  => d.asJsonObject
+        case d: Lookup => d.asJsonObject
+        case d: Union  => d.asJsonObject
+        case d: Inline => d.asJsonObject
+        case d: Query  => d.asJsonObject
+        case d: Join   => d.asJsonObject
       }).add("type", datasource.`type`.asJson).asJson
   }
 }
 
 sealed trait RightHandDatasource extends Datasource
 
-case class DatasourceTable(name: String) extends Datasource {
-  override val `type`: DatasourceType = DatasourceType.Table
+object RightHandDatasource {
+  implicit val encoder: Encoder[RightHandDatasource] = new Encoder[RightHandDatasource] {
+    override def apply(datasource: RightHandDatasource): Json =
+      (datasource match {
+        case d: Lookup => d.asJsonObject
+        case d: Inline => d.asJsonObject
+        case d: Query  => d.asJsonObject
+      }).add("type", datasource.`type`.asJson).asJson
+  }
 }
 
-case class DatasourceLookup(lookup: String) extends RightHandDatasource {
+case class Table(name: String) extends Datasource {
+  override val `type`: DatasourceType = DatasourceType.Table
+
+  def union(dataSources: Iterable[String]): Union =
+    Union(dataSources.foldLeft(List(this.name))((acc, tblName) => tblName :: acc))
+
+  def union[_ <: Table: ClassTag](dataSources: Iterable[Table]): Union =
+    Union(dataSources.foldLeft(List(this.name))((acc, tbl) => tbl.name :: acc))
+}
+
+case class Lookup(lookup: String) extends RightHandDatasource {
   override val `type`: DatasourceType = DatasourceType.Lookup
 }
 
-case class DatasourceUnion(dataSources: Seq[String]) extends Datasource {
+case class Union(dataSources: Iterable[String]) extends Datasource {
   override val `type`: DatasourceType = DatasourceType.Union
 }
 
-case class DatasourceInline(columnNames: Seq[String], rows: Seq[String])
+case class Inline(columnNames: Iterable[String], rows: Iterable[Iterable[String]])
     extends RightHandDatasource {
   override val `type`: DatasourceType = DatasourceType.Inline
 }
 
-case class DatasourceQuery(query: DruidNativeQuery) extends RightHandDatasource {
+case class Query(query: DruidNativeQuery) extends RightHandDatasource {
   override val `type`: DatasourceType = DatasourceType.Query
 }
 
@@ -86,13 +105,34 @@ object JoinType extends EnumCodec[JoinType] {
   val values: Set[JoinType] = sealerate.values[JoinType]
 }
 
-case class DatasourceJoin(
+case class Join(
     left: Datasource,
     right: RightHandDatasource,
     rightPrefix: String,
     condition: String,
     joinType: JoinType
 ) extends Datasource {
+
+  def this(left: String,
+           right: RightHandDatasource,
+           rightPrefix: String,
+           condition: String,
+           joinType: JoinType) =
+    this(Table(left), right, rightPrefix, condition, joinType)
+
+  def this(left: Datasource,
+           right: RightHandDatasource,
+           rightPrefix: String,
+           condition: Expression,
+           joinType: JoinType) = this(left, right, rightPrefix, condition.build(), joinType)
+
+  def this(left: String,
+           right: RightHandDatasource,
+           rightPrefix: String,
+           condition: Expression,
+           joinType: JoinType) =
+    this(Table(left), right, rightPrefix, condition.build(), joinType)
+
   require(rightPrefix.trim.nonEmpty, "`rightPrefix` should not be empty")
   require(rightPrefix.trim != "__time", "`rightPrefix` should not match to '__time'")
 

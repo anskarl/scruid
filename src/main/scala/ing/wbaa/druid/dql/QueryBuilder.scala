@@ -56,7 +56,7 @@ private[dql] sealed trait QueryBuilderCommons {
     * Specify the datasource to use, other than the default one in the configuration
     */
   def from(dataSource: String): this.type = {
-    dataSourceOpt = Option(DatasourceTable(dataSource))
+    dataSourceOpt = Option(Table(dataSource))
     this
   }
 

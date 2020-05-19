@@ -16,11 +16,11 @@
  */
 
 package ing.wbaa.druid.dql
+// scalastyle:off
+import ing.wbaa.druid.definitions._
+import ing.wbaa.druid.dql.expressions._
 
 import scala.language.implicitConversions
-
-import ing.wbaa.druid.definitions.ArithmeticFunction
-import ing.wbaa.druid.dql.expressions._
 
 object DSL
     extends FilteringExpressionOps
@@ -69,33 +69,97 @@ object DSL
   def dim(name: String): Dim = Dim(name)
 
   implicit class StringOps(val value: String) extends AnyVal {
-    def ===(s: Dim): FilteringExpression = s === value
-    def =!=(s: Dim): FilteringExpression = s =!= value
+    def ===(s: Dim): BaseExpression = s === value
+    def =!=(s: Dim): BaseExpression = s =!= value
   }
 
   implicit class NumOps(val value: Double) extends AnyVal {
 
     @inline
-    private def arithmeticPostAgg(s: Dim, fn: ArithmeticFunction): PostAggregationExpression =
+    private def arithmeticPostAgg(s: Dim, fn: ArithmeticFunction): ArithmeticPostAgg =
       ArithmeticPostAgg(
         new ConstantPostAgg(value),
         new FieldAccessPostAgg(s.name),
         fn = fn
       )
 
-    def ===(s: Dim): FilteringExpression = s === value
-    def =!=(s: Dim): FilteringExpression = s =!= value
-    def >(s: Dim): FilteringExpression   = s < value
-    def >=(s: Dim): FilteringExpression  = s <= value
-    def <(s: Dim): FilteringExpression   = s > value
-    def <=(s: Dim): FilteringExpression  = s >= value
+    def ===(s: Dim): BaseExpression = s === value
+    def =!=(s: Dim): BaseExpression = s =!= value
+    def >(s: Dim): BaseExpression   = s < value
+    def >=(s: Dim): BaseExpression  = s <= value
+    def <(s: Dim): BaseExpression   = s > value
+    def <=(s: Dim): BaseExpression  = s >= value
 
-    def +(s: Symbol): PostAggregationExpression = arithmeticPostAgg(s, ArithmeticFunction.PLUS)
-    def -(s: Symbol): PostAggregationExpression = arithmeticPostAgg(s, ArithmeticFunction.MINUS)
-    def *(s: Symbol): PostAggregationExpression = arithmeticPostAgg(s, ArithmeticFunction.MULT)
-    def /(s: Symbol): PostAggregationExpression = arithmeticPostAgg(s, ArithmeticFunction.DIV)
-    def quotient(s: Symbol): PostAggregationExpression =
+    //def +(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.PLUS)
+    def +(s: Dim): BaseArithmeticExpression = BaseArithmeticExpression(
+      portAgg = arithmeticPostAgg(s, ArithmeticFunction.PLUS),
+      expression = ExpressionOps.add(Expr(value), Expr(s.getName))
+    )
+    //def -(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.MINUS)
+    def -(s: Dim): BaseArithmeticExpression = BaseArithmeticExpression(
+      portAgg = arithmeticPostAgg(s, ArithmeticFunction.MINUS),
+      expression = ExpressionOps.subtract(Expr(value), Expr(s.getName))
+    )
+    //def *(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.MULT)
+    def *(s: Dim): BaseArithmeticExpression = BaseArithmeticExpression(
+      portAgg = arithmeticPostAgg(s, ArithmeticFunction.MULT),
+      expression = ExpressionOps.multiply(Expr(value), Expr(s.getName))
+    )
+
+    //def /(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.DIV)
+    def /(s: Dim): BaseArithmeticExpression = BaseArithmeticExpression(
+      portAgg = arithmeticPostAgg(s, ArithmeticFunction.DIV),
+      expression = ExpressionOps.divide(Expr(value), Expr(s.getName))
+    )
+
+    def %(s: Dim): Expression = ExpressionOps.modulo(Expr(value), Expr(s.getName))
+
+    def quotient(s: Dim): ArithmeticPostAgg =
       arithmeticPostAgg(s, ArithmeticFunction.QUOT)
 
   }
+
+  implicit class StringToExpression(val sc: StringContext) extends AnyVal {
+
+    /**
+      * Create an expression using simple string interpolator.
+      *
+      * {{{
+      *   val value = "something"
+      *
+      *   expr"dimension == ${value}"
+      * }}}
+      *
+      * @param args The arguments to be inserted into the resulting expression.
+      *
+      * @see StringContext
+      */
+    def expr(args: Any*): Expression = Expr(sc.s(args: _*))
+  }
+
+  implicit def baseExpressionToExpression(b: BaseExpression): Expression = b.asExpression
+  implicit def baseExpressionToFilteringExpression(
+      b: BaseExpression
+  ): FilteringExpression = b.asFilteringExpression
+
+  implicit def baseArithmeticExpressionToArithmeticPostAgg(
+      b: BaseArithmeticExpression
+  ): ArithmeticPostAgg = b.asArithmeticPostAgg
+  implicit def baseArithmeticExpressionToExpression(b: BaseArithmeticExpression): Expression =
+    b.asExpression
+
+  implicit class DatasourceOps(val left: Datasource) extends AnyVal {
+
+    def join(right: RightHandDatasource,
+             prefix: String,
+             condition: Expression,
+             joinType: JoinType = JoinType.Inner): Join =
+      Join(left = left,
+           right = right,
+           rightPrefix = prefix,
+           condition = condition.build(),
+           joinType = joinType)
+  }
+
 }
+// scalastyle:on

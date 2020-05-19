@@ -178,7 +178,7 @@ case class Bound(dimension: String,
                  upperStrict: Option[Boolean] = None,
                  ordering: Option[DimensionOrderType] = None,
                  extractionFn: Option[ExtractionFn] = None)
-    extends FilteringExpression
+    extends BaseExpression
     with FilterOnlyOperator {
 
   def withOrdering(v: DimensionOrderType): Bound = copy(ordering = Option(v))
@@ -187,7 +187,19 @@ case class Bound(dimension: String,
 
   override protected[dql] def createFilter: Filter =
     BoundFilter(dimension, lower, upper, lowerStrict, upperStrict, ordering, extractionFn)
+  // scalastyle:off
+  override def asFilteringExpression: FilteringExpression = this
 
+  override def asExpression: Expression = {
+
+    val lowerSymbol = if (lowerStrict.contains(true)) "<=" else "<"
+    val upperSymbol = if (upperStrict.contains(true)) ">=" else ">"
+    val lowerPart   = lower.map(value => s"$value $lowerSymbol").getOrElse("")
+    val upperPart   = lower.map(value => s"$upperSymbol $value").getOrElse("")
+
+    Expr(s"($lowerPart $dimension $upperPart)")
+  }
+  // scalastyle:on
 }
 
 class ColumnComparison(dimensions: Iterable[Dim])
