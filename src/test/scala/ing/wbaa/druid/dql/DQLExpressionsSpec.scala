@@ -16,24 +16,24 @@
  */
 
 package ing.wbaa.druid.dql
-
 // scalastyle:off
-
 import java.util.Locale
 
-import ing.wbaa.druid._
+import ing.wbaa.druid.{ DruidConfig, GroupByQuery }
 import ing.wbaa.druid.client.DruidHttpClient
-import ing.wbaa.druid.definitions._
+import ing.wbaa.druid.definitions.{ GranularityType, Inline, Table }
 import ing.wbaa.druid.dql.DSL._
-import io.circe.generic.auto._
-import org.scalatest.concurrent._
+import ing.wbaa.druid.dql.expressions.ExpressionFunctions._
+import ing.wbaa.druid.dql.expressions.ExpressionOps._
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import io.circe.generic.auto._
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class DQLDatasourceSpec extends AnyWordSpec with Matchers with ScalaFutures {
+class DQLExpressionsSpec extends AnyWordSpec with Matchers with ScalaFutures {
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(1 minute, 100 millis)
 
@@ -41,18 +41,21 @@ class DQLDatasourceSpec extends AnyWordSpec with Matchers with ScalaFutures {
 
   implicit val mat = config.client.actorMaterializer
 
-  private val totalNumberOfEntries = 39244
-
   private val countryData = Locale.getISOCountries.toList
     .map { code =>
       val locale = new Locale("en", code)
       List(code, locale.getISO3Country, locale.getDisplayCountry)
     }
 
-  case class GroupByIsAnonymous(isAnonymous: String, count: Int)
+  val numberOfResults = 100
 
-  case class CountryCity(country: String, city: String)
-  case class CountryCodes(iso2_code: String, iso3_code: String, name: String)
+  def baseScan =
+    DQL
+      .scan()
+      .granularity(GranularityType.All)
+      .interval("0000/4000")
+      .batchSize(10)
+      .limit(numberOfResults)
 
   case class JoinedScanResult(
       channel: Option[String],
@@ -63,69 +66,25 @@ class DQLDatasourceSpec extends AnyWordSpec with Matchers with ScalaFutures {
       mapped_country_name: Option[String]
   )
 
-  "DQL query with datasource" should {
-    import ing.wbaa.druid.dql.expressions.Expression
-
-    "successfully be interpreted by Druid when datasource is Table" in {
-      val query: GroupByQuery = DQL
-        .interval("2011-06-01/2017-06-01")
-        .from(Table("wikipedia"))
-        .agg(count as "count")
-        .groupBy(d"isAnonymous")
-        .build()
-
-      val request = query.execute()
-
-      whenReady(request) { response =>
-        response.list[GroupByIsAnonymous].map(_.count).sum shouldBe totalNumberOfEntries
-      }
-    }
-
-    "successfully be interpreted by Druid when datasource is inline" in {
-
-      val columnNames = Seq("iso2_code", "iso3_code", "name")
-
-      val query: ScanQuery = DQL
-        .scan()
-        .interval("0000/3000")
-        .from(Inline(columnNames, countryData))
-        .build()
-
-      val request = query.execute()
-
-      whenReady(request) { response =>
-        val expected = countryData
-          .map { case code2 :: code3 :: name :: Nil => CountryCodes(code2, code3, name) }
-
-        response.list[CountryCodes] shouldEqual expected
-      }
-    }
-
-    "successfully be interpreted by Druid when performing join" in {
-      val numberOfResults = 100
-
-      val query: ScanQuery = DQL
-        .scan()
-        .columns("channel",
-                 "cityName",
-                 "countryIsoCode",
-                 "user",
-                 "mapped_country_iso3_code",
-                 "mapped_country_name")
-        .granularity(GranularityType.All)
-        .interval("0000/4000")
-        .batchSize(10)
-        .limit(numberOfResults)
+  "DQL join query with expressions" should {
+    "lower" in {
+      val query = baseScan
         .from(
           Table("wikipedia")
             .joinNew(
               right = Inline(Seq("iso2_code", "iso3_code", "name"), countryData),
               prefix = "mapped_country_",
-              condition = (l, r) => l("countryIsoCode") === r("iso2_code")
-//              condition = d"countryIsoCode" === d"mapped_country_iso2_code"
+              (l, r) => upper(l("countryIsoCode")) === r("iso2_code") //upper(d"countryIsoCode") === d"mapped_country_iso2_code"
             )
+//            .join(
+//              right = Inline(Seq("iso2_code", "iso3_code", "name"), countryData),
+//              prefix = "mapped_country_",
+//              condition = upper(d"countryIsoCode") === d"mapped_country_iso2_code"
+//            )
         )
         .build()
+
+      println(query.toDebugString)
 
       val request = query.execute()
       whenReady(request) { response =>
@@ -138,10 +97,8 @@ class DQLDatasourceSpec extends AnyWordSpec with Matchers with ScalaFutures {
         val resultSeries = response.series[JoinedScanResult]
         resultSeries.size shouldBe numberOfResults
       }
-
     }
   }
 
 }
-
 // scalastyle:on

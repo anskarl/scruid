@@ -137,6 +137,8 @@ object DSL
     def expr(args: Any*): Expression = Expr(sc.s(args: _*))
   }
 
+  implicit def dimToExpression(d: Dim): Expression = Expr(d.getName)
+
   implicit def baseExpressionToExpression(b: BaseExpression): Expression = b.asExpression
   implicit def baseExpressionToFilteringExpression(
       b: BaseExpression
@@ -148,17 +150,39 @@ object DSL
   implicit def baseArithmeticExpressionToExpression(b: BaseArithmeticExpression): Expression =
     b.asExpression
 
+  sealed trait JoinPart
+  case class LeftPart() extends JoinPart {
+    def apply(dimName: String): LeftExpresssion = new LeftExpresssion(dimName)
+  }
+  case class RightPart(prefix: String) extends JoinPart {
+    def apply(dimName: String): RightExpresssion = new RightExpresssion(prefix + dimName)
+  }
+
   implicit class DatasourceOps(val left: Datasource) extends AnyVal {
 
-    def join(right: RightHandDatasource,
-             prefix: String,
-             condition: Expression,
-             joinType: JoinType = JoinType.Inner): Join =
+    def joinNew(right: RightHandDatasource,
+                prefix: String,
+                condition: (LeftPart, RightPart) => Expression,
+                joinType: JoinType = JoinType.Inner): Join = {
+      val leftPart  = LeftPart()
+      val rightPart = RightPart(prefix)
+
       Join(left = left,
            right = right,
            rightPrefix = prefix,
-           condition = condition.build(),
+           condition = condition(leftPart, rightPart).build(),
            joinType = joinType)
+    }
+
+//    def join(right: RightHandDatasource,
+//             prefix: String,
+//             condition: Expression,
+//             joinType: JoinType = JoinType.Inner): Join =
+//      Join(left = left,
+//           right = right,
+//           rightPrefix = prefix,
+//           condition = condition.build(),
+//           joinType = joinType)
   }
 
 }
