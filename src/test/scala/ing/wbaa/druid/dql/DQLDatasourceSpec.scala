@@ -19,8 +19,6 @@ package ing.wbaa.druid.dql
 
 // scalastyle:off
 
-import java.util.Locale
-
 import ing.wbaa.druid._
 import ing.wbaa.druid.client.DruidHttpClient
 import ing.wbaa.druid.definitions._
@@ -43,16 +41,13 @@ class DQLDatasourceSpec extends AnyWordSpec with Matchers with ScalaFutures {
 
   private val totalNumberOfEntries = 39244
 
-  private val countryData = Locale.getISOCountries.toList
-    .map { code =>
-      val locale = new Locale("en", code)
-      List(code, locale.getISO3Country, locale.getDisplayCountry)
-    }
-
   case class GroupByIsAnonymous(isAnonymous: String, count: Int)
 
   case class CountryCity(country: String, city: String)
-  case class CountryCodes(iso2_code: String, iso3_code: String, name: String)
+  case class CountryCodes(iso2_code_uppercase: String,
+                          iso2_code_lowercase: String,
+                          iso3_code: String,
+                          name: String)
 
   case class JoinedScanResult(
       channel: Option[String],
@@ -62,9 +57,8 @@ class DQLDatasourceSpec extends AnyWordSpec with Matchers with ScalaFutures {
       mapped_country_iso3_code: Option[String],
       mapped_country_name: Option[String]
   )
-
+//Inline(Seq("iso2_code_uppercase", "iso2_code_lowercase", "iso3_code", "name"), countryData)
   "DQL query with datasource" should {
-    import ing.wbaa.druid.dql.expressions.Expression
 
     "successfully be interpreted by Druid when datasource is Table" in {
       val query: GroupByQuery = DQL
@@ -83,19 +77,20 @@ class DQLDatasourceSpec extends AnyWordSpec with Matchers with ScalaFutures {
 
     "successfully be interpreted by Druid when datasource is inline" in {
 
-      val columnNames = Seq("iso2_code", "iso3_code", "name")
-
       val query: ScanQuery = DQL
         .scan()
         .interval("0000/3000")
-        .from(Inline(columnNames, countryData))
+        .from(InlineDatasources.countryDatasource)
         .build()
 
       val request = query.execute()
 
       whenReady(request) { response =>
-        val expected = countryData
-          .map { case code2 :: code3 :: name :: Nil => CountryCodes(code2, code3, name) }
+        val expected = InlineDatasources.countryData
+          .map {
+            case code2_uppercased :: code2_lowercased :: code3 :: name :: Nil =>
+              CountryCodes(code2_uppercased, code2_lowercased, code3, name)
+          }
 
         response.list[CountryCodes] shouldEqual expected
       }
@@ -118,11 +113,10 @@ class DQLDatasourceSpec extends AnyWordSpec with Matchers with ScalaFutures {
         .limit(numberOfResults)
         .from(
           Table("wikipedia")
-            .joinNew(
-              right = Inline(Seq("iso2_code", "iso3_code", "name"), countryData),
+            .join(
+              right = InlineDatasources.countryDatasource,
               prefix = "mapped_country_",
-              condition = (l, r) => l("countryIsoCode") === r("iso2_code")
-//              condition = d"countryIsoCode" === d"mapped_country_iso2_code"
+              condition = (l, r) => l("countryIsoCode") === r("iso2_code_uppercase")
             )
         )
         .build()

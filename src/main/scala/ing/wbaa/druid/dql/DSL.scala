@@ -152,18 +152,24 @@ object DSL
 
   sealed trait JoinPart
   case class LeftPart() extends JoinPart {
-    def apply(dimName: String): LeftExpresssion = new LeftExpresssion(dimName)
+    def apply(dimName: String): LeftExpression = new LeftExpression(dimName)
+    def dim(dimName: String): LeftExpression   = new LeftExpression(dimName)
+
+    // todo: this is an alternative design. We can instead add all functions inside the leftpart
+//    def abs(dimName: String, castType: CastType = CastType.Double): Expression =
+//      ExpressionFunctions.abs(ExpressionFunctions.cast(apply(dimName), castType))
   }
   case class RightPart(prefix: String) extends JoinPart {
-    def apply(dimName: String): RightExpresssion = new RightExpresssion(prefix + dimName)
+    def apply(dimName: String): RightExpression = new RightExpression(prefix + dimName)
+    def dim(dimName: String): RightExpression   = new RightExpression(prefix + dimName)
   }
 
   implicit class DatasourceOps(val left: Datasource) extends AnyVal {
 
-    def joinNew(right: RightHandDatasource,
-                prefix: String,
-                condition: (LeftPart, RightPart) => Expression,
-                joinType: JoinType = JoinType.Inner): Join = {
+    def join(right: RightHandDatasource,
+             prefix: String,
+             condition: (LeftPart, RightPart) => Expression,
+             joinType: JoinType = JoinType.Inner): Join = {
       val leftPart  = LeftPart()
       val rightPart = RightPart(prefix)
 
@@ -174,15 +180,6 @@ object DSL
            joinType = joinType)
     }
 
-//    def join(right: RightHandDatasource,
-//             prefix: String,
-//             condition: Expression,
-//             joinType: JoinType = JoinType.Inner): Join =
-//      Join(left = left,
-//           right = right,
-//           rightPrefix = prefix,
-//           condition = condition.build(),
-//           joinType = joinType)
   }
 
 }
