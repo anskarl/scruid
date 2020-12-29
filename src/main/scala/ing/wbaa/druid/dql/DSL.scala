@@ -68,55 +68,32 @@ object DSL
   def dim(name: String): Dim = Dim(name)
 
   implicit class StringOps(val value: String) extends AnyVal {
-    def ===(s: Dim): BaseExpression = s === value
-    def =!=(s: Dim): BaseExpression = s =!= value
+    def ===(s: Dim): FilteringExpression = s === value
+    def =!=(s: Dim): FilteringExpression = s =!= value
   }
 
   implicit class NumOps(val value: Double) extends AnyVal {
 
     @inline
-    private def arithmeticPostAgg(s: Dim, fn: ArithmeticFunction): ArithmeticPostAgg =
+    private def arithmeticPostAgg(s: Dim, fn: ArithmeticFunction): PostAggregationExpression =
       ArithmeticPostAgg(
         new ConstantPostAgg(value),
         new FieldAccessPostAgg(s.name),
         fn = fn
       )
 
-    def ===(s: Dim): BaseExpression = s === value
-    def =!=(s: Dim): BaseExpression = s =!= value
-    def >(s: Dim): BaseExpression   = s < value
-    def >=(s: Dim): BaseExpression  = s <= value
-    def <(s: Dim): BaseExpression   = s > value
-    def <=(s: Dim): BaseExpression  = s >= value
+    def ===(s: Dim): FilteringExpression = s === value
+    def =!=(s: Dim): FilteringExpression = s =!= value
+    def >(s: Dim): FilteringExpression   = s < value
+    def >=(s: Dim): FilteringExpression  = s <= value
+    def <(s: Dim): FilteringExpression   = s > value
+    def <=(s: Dim): FilteringExpression  = s >= value
 
-    // def +(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.PLUS)
-    def +(s: Dim): BaseArithmeticExpression = BaseArithmeticExpression(
-      portAgg = arithmeticPostAgg(s, ArithmeticFunction.PLUS),
-      expression = ExpressionOps.add(Expr(value), Expr(s.getName))
-    )
-    // def -(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.MINUS)
-    def -(s: Dim): BaseArithmeticExpression = BaseArithmeticExpression(
-      portAgg = arithmeticPostAgg(s, ArithmeticFunction.MINUS),
-      expression = ExpressionOps.subtract(Expr(value), Expr(s.getName))
-    )
-    // def *(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.MULT)
-    def *(s: Dim): BaseArithmeticExpression = BaseArithmeticExpression(
-      portAgg = arithmeticPostAgg(s, ArithmeticFunction.MULT),
-      expression = ExpressionOps.multiply(Expr(value), Expr(s.getName))
-    )
-
-    // def /(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.DIV)
-    def /(s: Dim): BaseArithmeticExpression = BaseArithmeticExpression(
-      portAgg = arithmeticPostAgg(s, ArithmeticFunction.DIV),
-      expression = ExpressionOps.divide(Expr(value), Expr(s.getName))
-    )
-
-    // scalastyle:off method.name
-    def %(s: Dim): Expression = ExpressionOps.modulo(Expr(value), Expr(s.getName))
-    // scalastyle:on method.name
-
-    def quotient(s: Dim): ArithmeticPostAgg =
-      arithmeticPostAgg(s, ArithmeticFunction.QUOT)
+    def +(s: Dim): PostAggregationExpression        = arithmeticPostAgg(s, ArithmeticFunction.PLUS)
+    def -(s: Dim): PostAggregationExpression        = arithmeticPostAgg(s, ArithmeticFunction.MINUS)
+    def *(s: Dim): PostAggregationExpression        = arithmeticPostAgg(s, ArithmeticFunction.MULT)
+    def /(s: Dim): PostAggregationExpression        = arithmeticPostAgg(s, ArithmeticFunction.DIV)
+    def quotient(s: Dim): PostAggregationExpression = arithmeticPostAgg(s, ArithmeticFunction.QUOT)
 
   }
 
@@ -135,28 +112,17 @@ object DSL
       *
       * @see StringContext
       */
-    def expr(args: Any*): Expression = Expr(sc.s(args: _*))
+    def expr(args: Any*): Expression = BaseExpression(sc.s(args: _*))
   }
 
-  implicit def dimToExpression(d: Dim): Expression = Expr(d.getName)
+  def lit[T](n: T): LeftExpression = new LeftExpression(n.toString)
 
-  implicit def baseExpressionToExpression(b: BaseExpression): Expression = b.asExpression
-  implicit def baseExpressionToFilteringExpression(
-      b: BaseExpression
-  ): FilteringExpression = b.asFilteringExpression
-
-  implicit def baseArithmeticExpressionToArithmeticPostAgg(
-      b: BaseArithmeticExpression
-  ): ArithmeticPostAgg = b.asArithmeticPostAgg
-  implicit def baseArithmeticExpressionToExpression(b: BaseArithmeticExpression): Expression =
-    b.asExpression
-
-  sealed trait JoinPart
-  case class LeftPart() extends JoinPart {
+  sealed trait JoinExpressionPart
+  case class JoinLeftExpressionPart() extends JoinExpressionPart {
     def apply(dimName: String): LeftExpression = new LeftExpression(dimName)
     def dim(dimName: String): LeftExpression   = new LeftExpression(dimName)
   }
-  case class RightPart(prefix: String) extends JoinPart {
+  case class JoinRightExpressionPart(prefix: String) extends JoinExpressionPart {
     def apply(dimName: String): RightExpression = new RightExpression(prefix + dimName)
     def dim(dimName: String): RightExpression   = new RightExpression(prefix + dimName)
   }
@@ -165,18 +131,17 @@ object DSL
 
     def join(right: RightHandDatasource,
              prefix: String,
-             condition: (LeftPart, RightPart) => Expression,
+             condition: (JoinLeftExpressionPart, JoinRightExpressionPart) => Expression,
              joinType: JoinType = JoinType.Inner): Join = {
-      val leftPart  = LeftPart()
-      val rightPart = RightPart(prefix)
-
-      Join(left = left,
-           right = right,
-           rightPrefix = prefix,
-           condition = condition(leftPart, rightPart).build(),
-           joinType = joinType)
+      val expr = condition(JoinLeftExpressionPart(), JoinRightExpressionPart(prefix))
+      joinExpr(right, prefix, expr, joinType)
     }
 
-  }
+    def joinExpr(right: RightHandDatasource,
+                 prefix: String,
+                 condition: Expression,
+                 joinType: JoinType = JoinType.Inner): Join =
+      Join(left, right, prefix, condition.build(), joinType)
 
+  }
 }

@@ -23,7 +23,6 @@ import ing.wbaa.druid.client.DruidHttpClient
 import ing.wbaa.druid.definitions.{ GranularityType, Inline }
 import ing.wbaa.druid.dql.DSL._
 import ing.wbaa.druid.dql.expressions.ExpressionFunctions._
-import ing.wbaa.druid.dql.expressions.ExpressionOps.lit
 import io.circe.generic.auto._
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.ScalaFutures
@@ -45,10 +44,10 @@ class DQLMathExpressionsSpec
 
   implicit val mat: ActorMaterializer = config.client.actorMaterializer
 
-  "DQL join inline datasources over the result of math function on dimension `number`" should {
+  "DQL join inline datasources over the result of math function" should {
 
     for { scenario <- scenarios } {
-      s"join when using `${scenario.functionName}` math function" in {
+      s"join when using function `${scenario.functionName}`" in {
 
         val request = baseQuery(scenario.leftPart, scenario.functionName).execute()
 
@@ -115,250 +114,245 @@ private[expressions] trait DQLMathExpressionsScenarios {
   final val scenarios: List[MathExpressionTestScenario[_]] = List(
     MathExpressionTestScenario(
       functionName = "abs",
-      leftPart = leftExpr => MathFunctions.abs(leftExpr, CastType.Double),
+      leftPart = leftExpr => abs(leftExpr, CastType.Double),
       expectedNumResults = 4,
       mathFunction = math.abs
     ),
     MathExpressionTestScenario(
       functionName = "acos",
-      leftPart = leftExpr => MathFunctions.acos(leftExpr, CastType.Double),
+      leftPart = leftExpr => acos(leftExpr, CastType.Double),
       expectedNumResults = 2,
       mathFunction = math.acos
     ),
     MathExpressionTestScenario(
       functionName = "asin",
-      leftPart = leftExpr => MathFunctions.asin(leftExpr, CastType.Double),
+      leftPart = leftExpr => asin(leftExpr, CastType.Double),
       expectedNumResults = 2,
       mathFunction = math.asin
     ),
     MathExpressionTestScenario(
       functionName = "atan",
-      leftPart = leftExpr => MathFunctions.atan(leftExpr, CastType.Double),
+      leftPart = leftExpr => atan(leftExpr, CastType.Double),
       expectedNumResults = 2,
       mathFunction = math.atan
     ),
     MathExpressionTestScenario(
       functionName = "atan2",
-      leftPart =
-        leftExpr => MathFunctions.atan2(leftExpr, leftExpr, CastType.Double, CastType.Double),
+      leftPart = leftExpr => atan2(leftExpr, leftExpr, CastType.Double, CastType.Double),
       expectedNumResults = 4,
       mathFunction = x => math.atan2(x, x)
     ),
     MathExpressionTestScenario(
       functionName = "cbrt",
-      leftPart = leftExpr => MathFunctions.cbrt(leftExpr, CastType.Double),
+      leftPart = leftExpr => cbrt(leftExpr, CastType.Double),
       expectedNumResults = 2,
       mathFunction = math.cbrt
     ),
     MathExpressionTestScenario(
       functionName = "ceil",
-      leftPart = leftExpr => MathFunctions.ceil(leftExpr, CastType.Double),
+      leftPart = leftExpr => ceil(leftExpr, CastType.Double),
       expectedNumResults = 2,
       mathFunction = math.ceil
     ),
     MathExpressionTestScenario(
       functionName = "copySign",
-      leftPart =
-        leftExpr => MathFunctions.copysign(leftExpr, leftExpr, CastType.Double, CastType.Double),
+      leftPart = leftExpr => copysign(leftExpr, leftExpr, CastType.Double, CastType.Double),
       expectedNumResults = 2,
       mathFunction = x => java.lang.Math.copySign(x, x)
     ),
     MathExpressionTestScenario(
       functionName = "cos",
-      leftPart = leftExpr => MathFunctions.cos(leftExpr, CastType.Double),
+      leftPart = leftExpr => cos(leftExpr, CastType.Double),
       expectedNumResults = 4,
       mathFunction = math.cos
     ),
     MathExpressionTestScenario(
       functionName = "cosh",
-      leftPart = leftExpr => MathFunctions.cosh(leftExpr, CastType.Double),
+      leftPart = leftExpr => cosh(leftExpr, CastType.Double),
       expectedNumResults = 4,
       mathFunction = math.cosh
     ),
     MathExpressionTestScenario(
       functionName = "cot",
-      leftPart = leftExpr => MathFunctions.cot(leftExpr, CastType.Double),
+      leftPart = leftExpr => cot(leftExpr, CastType.Double),
       expectedNumResults = 2,
       mathFunction = x => math.cos(x) / math.sin(x)
     ),
     MathExpressionTestScenario(
       functionName = "div",
-      leftPart = leftExpr => MathFunctions.div(lit(1), leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => div(lit(1), leftExpr.cast("DOUBLE")),
       expectedNumResults = 2,
       mathFunction = x => (1 / x).toLong
     ),
     MathExpressionTestScenario(
       functionName = "exp",
-      leftPart = leftExpr => MathFunctions.exp(leftExpr, CastType.Double),
+      leftPart = leftExpr => exp(leftExpr, CastType.Double),
       expectedNumResults = 2,
       mathFunction = math.exp
     ),
     MathExpressionTestScenario(
       functionName = "expm1",
-      leftPart = leftExpr => MathFunctions.expm1(leftExpr, CastType.Double),
+      leftPart = leftExpr => expm1(leftExpr, CastType.Double),
       expectedNumResults = 2,
       mathFunction = math.expm1
     ),
     MathExpressionTestScenario(
       functionName = "floor",
-      leftPart = leftExpr => MathFunctions.floor(leftExpr, CastType.Double),
+      leftPart = leftExpr => floor(leftExpr, CastType.Double),
       expectedNumResults = 4,
       mathFunction = math.floor
     ),
     MathExpressionTestScenario(
       functionName = "getExponent",
-      leftPart = leftExpr => MathFunctions.getExponent(leftExpr, CastType.Double),
+      leftPart = leftExpr => getExponent(leftExpr, CastType.Double),
       expectedNumResults = 5,
       mathFunction = x => java.lang.Math.getExponent(x).toLong
     ),
     MathExpressionTestScenario(
       functionName = "hypot",
-      leftPart =
-        leftExpr => MathFunctions.hypot(leftExpr, leftExpr, CastType.Double, CastType.Double),
+      leftPart = leftExpr => hypot(leftExpr, leftExpr, CastType.Double, CastType.Double),
       expectedNumResults = 4,
       mathFunction = x => math.hypot(x, x)
     ),
     // Note: cannot use negatives to compute log, log10 and log1p
     MathExpressionTestScenario(
       functionName = "log",
-      leftPart = leftExpr => MathFunctions.log(MathFunctions.abs(leftExpr, CastType.Double)),
+      leftPart = leftExpr => log(abs(leftExpr, CastType.Double)),
       expectedNumResults = 4,
       mathFunction = x => math.log(math.abs(x))
     ),
     MathExpressionTestScenario(
       functionName = "log10",
-      leftPart = leftExpr => MathFunctions.log10(MathFunctions.abs(leftExpr, CastType.Double)),
+      leftPart = leftExpr => log10(abs(leftExpr, CastType.Double)),
       expectedNumResults = 4,
       mathFunction = x => math.log10(math.abs(x))
     ),
     MathExpressionTestScenario(
       functionName = "log1p",
-      leftPart = leftExpr => MathFunctions.log1p(MathFunctions.abs(leftExpr, CastType.Double)),
+      leftPart = leftExpr => log1p(abs(leftExpr, CastType.Double)),
       expectedNumResults = 4,
       mathFunction = x => math.log1p(math.abs(x))
     ),
     MathExpressionTestScenario(
       functionName = "max",
       leftPart = leftExpr =>
-        MathFunctions.max(cast(leftExpr, CastType.Double),
-                          cast(leftExpr, CastType.Double) + cast(leftExpr, CastType.Double)),
+        max(cast(leftExpr, CastType.Double),
+            cast(leftExpr, CastType.Double) + cast(leftExpr, CastType.Double)),
       expectedNumResults = 2,
       mathFunction = x => math.max(x, x + x)
     ),
     MathExpressionTestScenario(
       functionName = "min",
       leftPart = leftExpr =>
-        MathFunctions.min(cast(leftExpr, CastType.Double),
-                          cast(leftExpr, CastType.Double) + cast(leftExpr, CastType.Double)),
+        min(cast(leftExpr, CastType.Double),
+            cast(leftExpr, CastType.Double) + cast(leftExpr, CastType.Double)),
       expectedNumResults = 2,
       mathFunction = x => math.min(x, x + x)
     ),
     MathExpressionTestScenario(
       functionName = "nextAfter",
       leftPart = leftExpr =>
-        MathFunctions.nextAfter(cast(leftExpr, CastType.Double),
-                                cast(leftExpr, CastType.Double) + cast(leftExpr, CastType.Double)),
+        nextAfter(cast(leftExpr, CastType.Double),
+                  cast(leftExpr, CastType.Double) + cast(leftExpr, CastType.Double)),
       expectedNumResults = 2,
       mathFunction = x => java.lang.Math.nextAfter(x, x + x)
     ),
     MathExpressionTestScenario(
       functionName = "nextUp",
-      leftPart = leftExpr => MathFunctions.nextUp(cast(leftExpr, CastType.Double)),
+      leftPart = leftExpr => nextUp(cast(leftExpr, CastType.Double)),
       expectedNumResults = 2,
       mathFunction = x => java.lang.Math.nextUp(x)
     ),
     MathExpressionTestScenario(
       functionName = "pi",
-      leftPart = _ => MathFunctions.pi,
+      leftPart = _ => pi,
       expectedNumResults = 10,
       mathFunction = _ => math.Pi
     ),
     MathExpressionTestScenario(
       functionName = "pow",
-      leftPart = leftExpr =>
-        MathFunctions.pow(MathFunctions.abs(leftExpr.cast(CastType.Double)),
-                          leftExpr.cast(CastType.Double)),
+      leftPart =
+        leftExpr => pow(abs(leftExpr.cast(CastType.Double)), leftExpr.cast(CastType.Double)),
       expectedNumResults = 3,
       mathFunction = number => math.pow(math.abs(number), number)
     ),
     MathExpressionTestScenario(
       functionName = "remainder",
       leftPart = leftExpr =>
-        MathFunctions.remainder(leftExpr.cast("DOUBLE"),
-                                leftExpr.cast("DOUBLE") + leftExpr.cast("DOUBLE")),
+        remainder(leftExpr.cast("DOUBLE"), leftExpr.cast("DOUBLE") + leftExpr.cast("DOUBLE")),
       expectedNumResults = 2,
       mathFunction = x => math.IEEEremainder(x, x + x)
     ),
     MathExpressionTestScenario(
       functionName = "rint",
-      leftPart = leftExpr => MathFunctions.rint(leftExpr, CastType.Double),
+      leftPart = leftExpr => rint(leftExpr, CastType.Double),
       expectedNumResults = 2,
       mathFunction = number => math.rint(number)
     ),
     MathExpressionTestScenario(
       functionName = "round",
-      leftPart = leftExpr => MathFunctions.round(leftExpr.cast("DOUBLE"), 1),
+      leftPart = leftExpr => round(leftExpr.cast("DOUBLE"), 1),
       expectedNumResults = 2,
       mathFunction =
         number => BigDecimal.decimal(number).setScale(1, BigDecimal.RoundingMode.HALF_UP).toDouble
     ),
     MathExpressionTestScenario(
       functionName = "scalb",
-      leftPart = leftExpr => MathFunctions.scalb(leftExpr.cast("DOUBLE"), 2),
+      leftPart = leftExpr => scalb(leftExpr.cast("DOUBLE"), 2),
       expectedNumResults = 2,
       mathFunction = number => math.scalb(number, 2)
     ),
     MathExpressionTestScenario(
       functionName = "signum",
-      leftPart = leftExpr => MathFunctions.signum(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => signum(leftExpr.cast("DOUBLE")),
       expectedNumResults = 4,
       mathFunction = number => math.signum(number)
     ),
     MathExpressionTestScenario(
       functionName = "sin",
-      leftPart = leftExpr => MathFunctions.sin(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => sin(leftExpr.cast("DOUBLE")),
       expectedNumResults = 2,
       mathFunction = number => math.sin(number)
     ),
     MathExpressionTestScenario(
       functionName = "sinh",
-      leftPart = leftExpr => MathFunctions.sinh(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => sinh(leftExpr.cast("DOUBLE")),
       expectedNumResults = 2,
       mathFunction = number => math.sinh(number)
     ),
     MathExpressionTestScenario(
       functionName = "sqrt",
-      leftPart = leftExpr => MathFunctions.sqrt(MathFunctions.abs(leftExpr.cast("DOUBLE"))),
+      leftPart = leftExpr => sqrt(abs(leftExpr.cast("DOUBLE"))),
       expectedNumResults = 4,
       mathFunction = number => math.sqrt(math.abs(number))
     ),
     MathExpressionTestScenario(
       functionName = "tan",
-      leftPart = leftExpr => MathFunctions.tan(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => tan(leftExpr.cast("DOUBLE")),
       expectedNumResults = 2,
       mathFunction = number => math.tan(number)
     ),
     MathExpressionTestScenario(
       functionName = "tanh",
-      leftPart = leftExpr => MathFunctions.tanh(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => tanh(leftExpr.cast("DOUBLE")),
       expectedNumResults = 2,
       mathFunction = number => math.tanh(number)
     ),
     MathExpressionTestScenario(
       functionName = "todegrees",
-      leftPart = leftExpr => MathFunctions.todegrees(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => todegrees(leftExpr.cast("DOUBLE")),
       expectedNumResults = 2,
       mathFunction = number => math.toDegrees(number)
     ),
     MathExpressionTestScenario(
       functionName = "toradians",
-      leftPart = leftExpr => MathFunctions.toradians(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => toradians(leftExpr.cast("DOUBLE")),
       expectedNumResults = 2,
       mathFunction = number => math.toRadians(number)
     ),
     MathExpressionTestScenario(
       functionName = "ulp",
-      leftPart = leftExpr => MathFunctions.ulp(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => ulp(leftExpr.cast("DOUBLE")),
       expectedNumResults = 5,
       mathFunction = number => math.ulp(number)
     )
