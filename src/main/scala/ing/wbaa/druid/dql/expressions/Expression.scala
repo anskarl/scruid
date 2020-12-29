@@ -131,7 +131,10 @@ class LeftExpression(value: String) extends Expression {
   def cast(to: CastType): LeftExpression = GeneralFunctions.cast(this, to)
 
   def cast(to: String): LeftExpression =
-    cast(CastType.decode(to).getOrElse(throw new IllegalArgumentException))
+    CastType.decode(to) match {
+      case Left(error)          => throw new IllegalArgumentException(s"Failed to cast to type '$to'", error)
+      case Right(castTypeValue) => cast(castTypeValue)
+    }
 
   // Unary NOT
   def unary_!(): LeftExpression = new LeftExpression(s"!$value")

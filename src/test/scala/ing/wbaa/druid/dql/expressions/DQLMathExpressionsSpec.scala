@@ -300,7 +300,7 @@ private[expressions] trait DQLMathExpressionsScenarios {
       functionName = "scalb",
       leftPart = leftExpr => scalb(leftExpr.cast("DOUBLE"), 2),
       expectedNumResults = 2,
-      mathFunction = number => math.scalb(number, 2)
+      mathFunction = number => java.lang.Math.scalb(number, 2)
     ),
     MathExpressionTestScenario(
       functionName = "signum",
