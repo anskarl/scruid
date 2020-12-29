@@ -139,26 +139,23 @@ object ExpressionOps {
 
 }
 
-class Expr private (value: String) extends Expression {
-  override def build(): String = this.value
-}
-
 object Expr {
 
-  def function(name: String, arg: String): Expression =
-    Expr(s"${name}(${arg})")
+  def function(name: String, arg: String): LeftExpression =
+    new LeftExpression(s"${name}(${arg})")
 
-  def function(name: String, args: Any*): Expression =
-    Expr(s"${name}(${args.map(_.toString).mkString(",")})")
+  def function(name: String, args: Any*): LeftExpression =
+    new LeftExpression(s"${name}(${args.map(_.toString).mkString(",")})")
 
-  def function(name: String, args: Iterable[String]): Expression =
-    Expr(s"${name}(${args.mkString(",")})")
+  def function(name: String, args: Iterable[String]): LeftExpression =
+    new LeftExpression(s"${name}(${args.mkString(",")})")
 
-  def apply(v: String): Expr        = new Expr(v)
-  def apply[T: Numeric](v: T): Expr = new Expr(v.toString)
+  def apply(v: String): LeftExpression        = new LeftExpression(v)
+  def apply[T: Numeric](v: T): LeftExpression = new LeftExpression(v.toString)
 
-  def apply[T <: CharSequence](values: Iterable[T]): Expr = new Expr(values.mkString("[", ",", "]"))
-  def apply[T: Numeric](values: Iterable[T]): Expr        = this.apply(values.map(_.toString))
+  def apply[T <: CharSequence](values: Iterable[T]): LeftExpression =
+    new LeftExpression(values.mkString("[", ",", "]"))
+  def apply[T: Numeric](values: Iterable[T]): LeftExpression = this.apply(values.map(_.toString))
 
 }
 
@@ -341,164 +338,164 @@ object GeneralFunctions extends GeneralFunctions
 
 trait StringFunctions {
 
-  def concat(args: LeftExpression*): Expression =
+  def concat(args: LeftExpression*): LeftExpression =
     Expr.function("concat", args.map(_.build()))
 
-  def format(pattern: String, args: LeftExpression*): Expression =
+  def format(pattern: String, args: LeftExpression*): LeftExpression =
     Expr.function("format", args.scanLeft(pattern)((_, e) => e.build()))
 
-  def like(expr: LeftExpression, pattern: String): Expression =
+  def like(expr: LeftExpression, pattern: String): LeftExpression =
     Expr(s"${expr.build()} LIKE ${pattern}")
 
-  def like(expr: LeftExpression, pattern: String, escape: String): Expression =
+  def like(expr: LeftExpression, pattern: String, escape: String): LeftExpression =
     Expr(s"${expr.build()} LIKE ${pattern} ${escape}")
 
-  def lookup(expr: LeftExpression, lookupName: String): Expression =
+  def lookup(expr: LeftExpression, lookupName: String): LeftExpression =
     Expr.function("lookup", expr.build(), lookupName)
 
-  def parseLong(value: String): Expression =
+  def parseLong(value: String): LeftExpression =
     Expr.function("parse_long", value)
 
-  def parseLong(value: String, radix: Int): Expression =
+  def parseLong(value: String, radix: Int): LeftExpression =
     Expr.function("parse_long", value, radix)
 
-  def regexpExtract(expr: LeftExpression, pattern: String): Expression =
+  def regexpExtract(expr: LeftExpression, pattern: String): LeftExpression =
     Expr.function("timestamp_ceil", expr.build(), pattern)
 
-  def regexpExtract(expr: LeftExpression, pattern: String, index: Int): Expression =
+  def regexpExtract(expr: LeftExpression, pattern: String, index: Int): LeftExpression =
     Expr.function("regexp_extract", expr.build(), pattern, index)
 
-  def regexpLike(expr: LeftExpression, pattern: String): Expression =
+  def regexpLike(expr: LeftExpression, pattern: String): LeftExpression =
     Expr.function("regexp_like", expr.build(), pattern)
 
-  def containsString(expr: LeftExpression, pattern: String): Expression =
+  def containsString(expr: LeftExpression, pattern: String): LeftExpression =
     Expr.function("contains_string", expr.build(), pattern)
 
-  def icontainsString(expr: LeftExpression, pattern: String): Expression =
+  def icontainsString(expr: LeftExpression, pattern: String): LeftExpression =
     Expr.function("icontains_string", expr.build(), pattern)
 
-  def replace(expr: LeftExpression, pattern: String, replacement: String): Expression =
+  def replace(expr: LeftExpression, pattern: String, replacement: String): LeftExpression =
     Expr.function("replace", expr.build(), pattern, replacement)
 
-  def substring(expr: LeftExpression, index: Int, length: Int): Expression =
+  def substring(expr: LeftExpression, index: Int, length: Int): LeftExpression =
     Expr.function("substring", expr.build(), index, length)
 
   // right(expr, length) returns the rightmost length characters from a string
-  def right(expr: LeftExpression, length: Int): Expression =
+  def right(expr: LeftExpression, length: Int): LeftExpression =
     Expr.function("right", expr.build(), length)
 
-  def left(expr: LeftExpression, length: Int): Expression =
+  def left(expr: LeftExpression, length: Int): LeftExpression =
     Expr.function("left", expr.build(), length)
 
-  def strlen(expr: LeftExpression): Expression =
+  def strlen(expr: LeftExpression): LeftExpression =
     Expr.function("left", expr.build())
 
-  def strpos(haystack: LeftExpression, needle: String): Expression =
+  def strpos(haystack: LeftExpression, needle: String): LeftExpression =
     Expr.function("strpos", haystack.build(), needle)
 
-  def strpos(haystack: LeftExpression, needle: String, fromIndex: Int): Expression =
+  def strpos(haystack: LeftExpression, needle: String, fromIndex: Int): LeftExpression =
     Expr.function("strpos", haystack.build(), needle, fromIndex)
 
-  def trim(expr: LeftExpression): Expression =
+  def trim(expr: LeftExpression): LeftExpression =
     Expr.function("trim", expr.build())
 
-  def trim(expr: LeftExpression, chars: String = " "): Expression =
+  def trim(expr: LeftExpression, chars: String = " "): LeftExpression =
     Expr.function("trim", expr.build(), chars)
 
-  def ltrim(expr: LeftExpression): Expression =
+  def ltrim(expr: LeftExpression): LeftExpression =
     Expr.function("ltrim", expr.build())
 
-  def ltrim(expr: LeftExpression, chars: String = " "): Expression =
+  def ltrim(expr: LeftExpression, chars: String = " "): LeftExpression =
     Expr.function("ltrim", expr.build(), chars)
 
-  def rtrim(expr: LeftExpression): Expression =
+  def rtrim(expr: LeftExpression): LeftExpression =
     Expr.function("rtrim", expr.build())
 
-  def rtrim(expr: LeftExpression, chars: String = " "): Expression =
+  def rtrim(expr: LeftExpression, chars: String = " "): LeftExpression =
     Expr.function("rtrim", expr.build(), chars)
 
-  def lower(expr: LeftExpression): Expression =
+  def lower(expr: LeftExpression): LeftExpression =
     Expr.function("lower", expr.build())
 
-  def upper(expr: LeftExpression): Expression =
+  def upper(expr: LeftExpression): LeftExpression =
     Expr.function("upper", expr.build())
 
-  def reverse(expr: LeftExpression): Expression =
+  def reverse(expr: LeftExpression): LeftExpression =
     Expr.function("reverse", expr.build())
 
-  def repeat(expr: LeftExpression, n: Int): Expression =
+  def repeat(expr: LeftExpression, n: Int): LeftExpression =
     Expr.function("repeat", expr.build(), n)
 
-  def lpad(expr: LeftExpression, length: Int, chars: String): Expression =
+  def lpad(expr: LeftExpression, length: Int, chars: String): LeftExpression =
     Expr.function("lpad", expr.build(), length, chars)
 
-  def rpad(expr: LeftExpression, length: Int, chars: String): Expression =
+  def rpad(expr: LeftExpression, length: Int, chars: String): LeftExpression =
     Expr.function("rpad", expr.build(), length, chars)
 }
 
 trait TimeFunctions {
 
-  def timestamp(expr: LeftExpression): Expression =
+  def timestamp(expr: LeftExpression): LeftExpression =
     Expr.function("timestamp", expr.build())
 
-  def timestamp(expr: LeftExpression, formatString: String): Expression =
+  def timestamp(expr: LeftExpression, formatString: String): LeftExpression =
     Expr.function("timestamp", expr.build(), formatString)
 
-  def unixTimestamp(expr: LeftExpression): Expression =
+  def unixTimestamp(expr: LeftExpression): LeftExpression =
     Expr.function("unix_timestamp", expr.build())
 
-  def unixTimestamp(expr: LeftExpression, formatString: String): Expression =
+  def unixTimestamp(expr: LeftExpression, formatString: String): LeftExpression =
     Expr.function("unix_timestamp", expr.build(), formatString)
 
-  def timestampCeil(expr: LeftExpression, period: String): Expression =
+  def timestampCeil(expr: LeftExpression, period: String): LeftExpression =
     Expr.function("timestamp_ceil", expr.build(), period)
 
   def timestampCeil(expr: LeftExpression,
                     period: String,
                     timezone: String,
-                    origin: Option[String] = None): Expression =
+                    origin: Option[String] = None): LeftExpression =
     Expr.function("timestamp_ceil", expr.build(), period, origin.getOrElse("null"), timezone)
 
-  def timestampFloor(expr: LeftExpression, period: String): Expression =
+  def timestampFloor(expr: LeftExpression, period: String): LeftExpression =
     Expr.function("timestamp_floor", expr.build(), period)
 
   def timestampFloor(expr: LeftExpression,
                      period: String,
                      timezone: String,
-                     origin: Option[String] = None): Expression =
+                     origin: Option[String] = None): LeftExpression =
     Expr.function("timestamp_floor", expr.build(), period, origin.getOrElse("null"), timezone)
 
-  def timestampShift(expr: LeftExpression, period: String): Expression =
+  def timestampShift(expr: LeftExpression, period: String): LeftExpression =
     Expr.function("timestamp_shift", expr.build(), period)
 
   def timestampShift(expr: LeftExpression,
                      period: String,
                      timezone: String,
-                     origin: Option[String] = None): Expression =
+                     origin: Option[String] = None): LeftExpression =
     Expr.function("timestamp_shift", expr.build(), period, origin.getOrElse("null"), timezone)
 
-  def timestampExtract(expr: LeftExpression, unit: String): Expression =
+  def timestampExtract(expr: LeftExpression, unit: String): LeftExpression =
     Expr.function("timestamp_extract", expr.build(), unit)
 
-  def timestampExtract(expr: LeftExpression, unit: String, timezone: String): Expression =
+  def timestampExtract(expr: LeftExpression, unit: String, timezone: String): LeftExpression =
     Expr.function("timestamp_extract", expr.build(), unit, timezone)
 
-  def timestampParse(expr: String): Expression =
+  def timestampParse(expr: String): LeftExpression =
     Expr.function("timestamp_parse", expr)
 
-  def timestampParse(expr: String, pattern: String): Expression =
+  def timestampParse(expr: String, pattern: String): LeftExpression =
     Expr.function("timestamp_parse", expr, pattern)
 
-  def timestampParse(expr: String, pattern: String, timezone: String): Expression =
+  def timestampParse(expr: String, pattern: String, timezone: String): LeftExpression =
     Expr.function("timestamp_parse", expr, pattern, timezone)
 
-  def timestampFormat(expr: LeftExpression): Expression =
+  def timestampFormat(expr: LeftExpression): LeftExpression =
     Expr.function("timestamp_format", expr.build())
 
-  def timestampFormat(expr: LeftExpression, pattern: String): Expression =
+  def timestampFormat(expr: LeftExpression, pattern: String): LeftExpression =
     Expr.function("timestamp_format", expr.build(), pattern)
 
-  def timestampFormat(expr: LeftExpression, pattern: String, timezone: String): Expression =
+  def timestampFormat(expr: LeftExpression, pattern: String, timezone: String): LeftExpression =
     Expr.function("timestamp_format", expr.build(), pattern, timezone)
 
 }
@@ -506,192 +503,193 @@ trait TimeFunctions {
 trait MathFunctions {
   import ExpressionFunctions.cast
 
-  // todo all should return LeftExpression
   def abs(x: LeftExpression): LeftExpression                     = new LeftExpression(s"abs(${x.build()})")
   def abs(x: LeftExpression, castType: CastType): LeftExpression = abs(cast(x, castType))
 
-  def acos(x: LeftExpression): Expression                     = Expr.function("acos", x.build())
-  def acos(x: LeftExpression, castType: CastType): Expression = acos(cast(x, castType))
+  def acos(x: LeftExpression): LeftExpression                     = Expr.function("acos", x.build())
+  def acos(x: LeftExpression, castType: CastType): LeftExpression = acos(cast(x, castType))
 
-  def asin(x: LeftExpression): Expression                     = Expr.function("asin", x.build())
-  def asin(x: LeftExpression, castType: CastType): Expression = asin(cast(x, castType))
+  def asin(x: LeftExpression): LeftExpression                     = Expr.function("asin", x.build())
+  def asin(x: LeftExpression, castType: CastType): LeftExpression = asin(cast(x, castType))
 
-  def atan(x: LeftExpression): Expression                     = Expr.function("atan", x.build())
-  def atan(x: LeftExpression, castType: CastType): Expression = atan(cast(x, castType))
+  def atan(x: LeftExpression): LeftExpression                     = Expr.function("atan", x.build())
+  def atan(x: LeftExpression, castType: CastType): LeftExpression = atan(cast(x, castType))
 
-  def atan2(x: LeftExpression, y: LeftExpression): Expression =
+  def atan2(x: LeftExpression, y: LeftExpression): LeftExpression =
     Expr.function("atan2", x.build(), y.build())
 
   def atan2(x: LeftExpression,
             y: LeftExpression,
             xCastType: CastType,
-            yCastType: CastType): Expression =
+            yCastType: CastType): LeftExpression =
     atan2(cast(x, xCastType), cast(y, yCastType))
 
-  def cbrt(x: LeftExpression): Expression                     = Expr.function("cbrt", x.build())
-  def cbrt(x: LeftExpression, castType: CastType): Expression = cbrt(cast(x, castType))
+  def cbrt(x: LeftExpression): LeftExpression                     = Expr.function("cbrt", x.build())
+  def cbrt(x: LeftExpression, castType: CastType): LeftExpression = cbrt(cast(x, castType))
 
-  def ceil(x: LeftExpression): Expression                     = Expr.function("ceil", x.build())
-  def ceil(x: LeftExpression, castType: CastType): Expression = ceil(cast(x, castType))
+  def ceil(x: LeftExpression): LeftExpression                     = Expr.function("ceil", x.build())
+  def ceil(x: LeftExpression, castType: CastType): LeftExpression = ceil(cast(x, castType))
 
-  def copysign(x: LeftExpression, y: LeftExpression): Expression =
+  def copysign(x: LeftExpression, y: LeftExpression): LeftExpression =
     Expr.function("copysign", x.build(), y.build())
 
   def copysign(x: LeftExpression,
                y: LeftExpression,
                xCastType: CastType,
-               yCastType: CastType): Expression =
+               yCastType: CastType): LeftExpression =
     copysign(cast(x, xCastType), cast(y, yCastType))
 
-  def cos(x: LeftExpression): Expression                     = Expr.function("cos", x.build())
-  def cos(x: LeftExpression, castType: CastType): Expression = cos(cast(x, castType))
+  def cos(x: LeftExpression): LeftExpression                     = Expr.function("cos", x.build())
+  def cos(x: LeftExpression, castType: CastType): LeftExpression = cos(cast(x, castType))
 
-  def cosh(x: LeftExpression): Expression                     = Expr.function("cosh", x.build())
-  def cosh(x: LeftExpression, castType: CastType): Expression = cosh(cast(x, castType))
+  def cosh(x: LeftExpression): LeftExpression                     = Expr.function("cosh", x.build())
+  def cosh(x: LeftExpression, castType: CastType): LeftExpression = cosh(cast(x, castType))
 
-  def cot(x: LeftExpression): Expression                     = Expr.function("cot", x.build())
-  def cot(x: LeftExpression, castType: CastType): Expression = cot(cast(x, castType))
+  def cot(x: LeftExpression): LeftExpression                     = Expr.function("cot", x.build())
+  def cot(x: LeftExpression, castType: CastType): LeftExpression = cot(cast(x, castType))
 
-  def div(x: LeftExpression, y: LeftExpression): Expression =
+  def div(x: LeftExpression, y: LeftExpression): LeftExpression =
     Expr.function("div", x.build(), y.build())
-  def div(x: LeftExpression, y: LeftExpression, castType: CastType): Expression =
+  def div(x: LeftExpression, y: LeftExpression, castType: CastType): LeftExpression =
     div(cast(x, castType), cast(y, castType))
 
-  def exp(x: LeftExpression): Expression                     = Expr.function("exp", x.build())
-  def exp(x: LeftExpression, castType: CastType): Expression = exp(cast(x, castType))
+  def exp(x: LeftExpression): LeftExpression                     = Expr.function("exp", x.build())
+  def exp(x: LeftExpression, castType: CastType): LeftExpression = exp(cast(x, castType))
 
-  def expm1(x: LeftExpression): Expression                     = Expr.function("expm1", x.build())
-  def expm1(x: LeftExpression, castType: CastType): Expression = expm1(cast(x, castType))
+  def expm1(x: LeftExpression): LeftExpression                     = Expr.function("expm1", x.build())
+  def expm1(x: LeftExpression, castType: CastType): LeftExpression = expm1(cast(x, castType))
 
-  def floor(x: LeftExpression): Expression                     = Expr.function("floor", x.build())
-  def floor(x: LeftExpression, castType: CastType): Expression = floor(cast(x, castType))
+  def floor(x: LeftExpression): LeftExpression                     = Expr.function("floor", x.build())
+  def floor(x: LeftExpression, castType: CastType): LeftExpression = floor(cast(x, castType))
 
-  def getExponent(x: LeftExpression): Expression = Expr.function("getExponent", x.build())
-  def getExponent(x: LeftExpression, castType: CastType): Expression =
+  def getExponent(x: LeftExpression): LeftExpression = Expr.function("getExponent", x.build())
+  def getExponent(x: LeftExpression, castType: CastType): LeftExpression =
     getExponent(cast(x, castType))
 
-  def hypot(x: LeftExpression, y: LeftExpression): Expression =
+  def hypot(x: LeftExpression, y: LeftExpression): LeftExpression =
     Expr.function("hypot", x.build(), y.build())
 
   def hypot(x: LeftExpression,
             y: LeftExpression,
             xCastType: CastType,
-            yCastType: CastType): Expression =
+            yCastType: CastType): LeftExpression =
     hypot(cast(x, xCastType), cast(y, yCastType))
 
-  def log(x: LeftExpression): Expression                     = Expr.function("log", x.build())
-  def log(x: LeftExpression, castType: CastType): Expression = log(cast(x, castType))
+  def log(x: LeftExpression): LeftExpression                     = Expr.function("log", x.build())
+  def log(x: LeftExpression, castType: CastType): LeftExpression = log(cast(x, castType))
 
-  def log10(x: LeftExpression): Expression                     = Expr.function("log10", x.build())
-  def log10(x: LeftExpression, castType: CastType): Expression = log10(cast(x, castType))
+  def log10(x: LeftExpression): LeftExpression                     = Expr.function("log10", x.build())
+  def log10(x: LeftExpression, castType: CastType): LeftExpression = log10(cast(x, castType))
 
-  def log1p(x: LeftExpression): Expression                     = Expr.function("log1p", x.build())
-  def log1p(x: LeftExpression, castType: CastType): Expression = log1p(cast(x, castType))
+  def log1p(x: LeftExpression): LeftExpression                     = Expr.function("log1p", x.build())
+  def log1p(x: LeftExpression, castType: CastType): LeftExpression = log1p(cast(x, castType))
 
-  def max(x: LeftExpression, y: LeftExpression): Expression =
+  def max(x: LeftExpression, y: LeftExpression): LeftExpression =
     Expr.function("max", x.build(), y.build())
 
   def max(x: LeftExpression,
           y: LeftExpression,
           xCastType: CastType,
-          yCastType: CastType): Expression =
+          yCastType: CastType): LeftExpression =
     max(cast(x, xCastType), cast(y, yCastType))
 
-  def min(x: LeftExpression, y: LeftExpression): Expression =
+  def min(x: LeftExpression, y: LeftExpression): LeftExpression =
     Expr.function("min", x.build(), y.build())
 
   def min(x: LeftExpression,
           y: LeftExpression,
           xCastType: CastType,
-          yCastType: CastType): Expression =
+          yCastType: CastType): LeftExpression =
     min(cast(x, xCastType), cast(y, yCastType))
 
-  def nextAfter(x: LeftExpression, y: LeftExpression): Expression =
+  def nextAfter(x: LeftExpression, y: LeftExpression): LeftExpression =
     Expr.function("nextAfter", x.build(), y.build())
 
   def nextAfter(x: LeftExpression,
                 y: LeftExpression,
                 xCastType: CastType,
-                yCastType: CastType): Expression =
+                yCastType: CastType): LeftExpression =
     nextAfter(cast(x, xCastType), cast(y, yCastType))
 
-  def nextUp(x: LeftExpression): Expression                     = Expr.function("nextUp", x.build())
-  def nextUp(x: LeftExpression, castType: CastType): Expression = nextUp(cast(x, castType))
+  def nextUp(x: LeftExpression): LeftExpression                     = Expr.function("nextUp", x.build())
+  def nextUp(x: LeftExpression, castType: CastType): LeftExpression = nextUp(cast(x, castType))
 
-  def pi: Expression = Expr.function("pi")
+  def pi: LeftExpression = Expr.function("pi")
 
-  def pow(x: LeftExpression, y: LeftExpression): Expression =
+  def pow(x: LeftExpression, y: LeftExpression): LeftExpression =
     Expr.function("pow", x.build(), y.build())
   def pow(x: LeftExpression,
           y: LeftExpression,
           xCastType: CastType,
-          yCastType: CastType): Expression =
+          yCastType: CastType): LeftExpression =
     pow(cast(x, xCastType), cast(y, yCastType))
 
-  def remainder(x: LeftExpression, y: LeftExpression): Expression =
+  def remainder(x: LeftExpression, y: LeftExpression): LeftExpression =
     Expr.function("remainder", x.build(), y.build())
   def remainder(x: LeftExpression,
                 y: LeftExpression,
                 xCastType: CastType,
-                yCastType: CastType): Expression =
+                yCastType: CastType): LeftExpression =
     remainder(cast(x, xCastType), cast(y, yCastType))
 
-  def rint(x: LeftExpression): Expression                     = Expr.function("rint", x.build())
-  def rint(x: LeftExpression, castType: CastType): Expression = rint(cast(x, castType))
+  def rint(x: LeftExpression): LeftExpression                     = Expr.function("rint", x.build())
+  def rint(x: LeftExpression, castType: CastType): LeftExpression = rint(cast(x, castType))
 
-  def round(x: LeftExpression, scale: LeftExpression): Expression =
+  def round(x: LeftExpression, scale: LeftExpression): LeftExpression =
     Expr.function("round", x.build(), scale.cast(CastType.Long).build())
 
-  def round(x: LeftExpression, scale: Int): Expression =
+  def round(x: LeftExpression, scale: Int): LeftExpression =
     Expr.function("round", x.build(), scale.toString)
 
-  def round(x: LeftExpression): Expression = round(x, scale = 0)
+  def round(x: LeftExpression): LeftExpression = round(x, scale = 0)
 
-  def round(x: LeftExpression, castType: CastType, scale: Int): Expression =
+  def round(x: LeftExpression, castType: CastType, scale: Int): LeftExpression =
     round(cast(x, castType), scale)
-  def round(x: LeftExpression, castType: CastType): Expression = round(x, castType, scale = 0)
+  def round(x: LeftExpression, castType: CastType): LeftExpression = round(x, castType, scale = 0)
 
-  def round(x: LeftExpression, scale: LeftExpression, castType: CastType): Expression =
+  def round(x: LeftExpression, scale: LeftExpression, castType: CastType): LeftExpression =
     round(x.cast(castType), scale)
 
-  def scalb(d: LeftExpression, sf: Int): Expression =
+  def scalb(d: LeftExpression, sf: Int): LeftExpression =
     Expr.function("scalb", d.build(), sf.toString)
 
-  def scalb(d: LeftExpression, sf: LeftExpression): Expression =
+  def scalb(d: LeftExpression, sf: LeftExpression): LeftExpression =
     Expr.function("scalb", d.build(), sf.build())
 
   def scalb(d: LeftExpression,
             sf: LeftExpression,
             xCastType: CastType,
-            yCastType: CastType): Expression =
+            yCastType: CastType): LeftExpression =
     scalb(cast(d, xCastType), cast(sf, yCastType))
 
-  def signum(x: LeftExpression): Expression                     = Expr.function("signum", x.build())
-  def signum(x: LeftExpression, castType: CastType): Expression = signum(cast(x, castType))
+  def signum(x: LeftExpression): LeftExpression                     = Expr.function("signum", x.build())
+  def signum(x: LeftExpression, castType: CastType): LeftExpression = signum(cast(x, castType))
 
-  def sin(x: LeftExpression): Expression                     = Expr.function("sin", x.build())
-  def sin(x: LeftExpression, castType: CastType): Expression = sin(cast(x, castType))
+  def sin(x: LeftExpression): LeftExpression                     = Expr.function("sin", x.build())
+  def sin(x: LeftExpression, castType: CastType): LeftExpression = sin(cast(x, castType))
 
-  def sinh(x: LeftExpression): Expression                     = Expr.function("sinh", x.build())
-  def sinh(x: LeftExpression, castType: CastType): Expression = sinh(cast(x, castType))
+  def sinh(x: LeftExpression): LeftExpression                     = Expr.function("sinh", x.build())
+  def sinh(x: LeftExpression, castType: CastType): LeftExpression = sinh(cast(x, castType))
 
-  def sqrt(x: LeftExpression): Expression                     = Expr.function("sqrt", x.build())
-  def sqrt(x: LeftExpression, castType: CastType): Expression = sqrt(cast(x, castType))
+  def sqrt(x: LeftExpression): LeftExpression                     = Expr.function("sqrt", x.build())
+  def sqrt(x: LeftExpression, castType: CastType): LeftExpression = sqrt(cast(x, castType))
 
-  def tan(x: LeftExpression): Expression                     = Expr.function("tan", x.build())
-  def tan(x: LeftExpression, castType: CastType): Expression = tan(cast(x, castType))
+  def tan(x: LeftExpression): LeftExpression                     = Expr.function("tan", x.build())
+  def tan(x: LeftExpression, castType: CastType): LeftExpression = tan(cast(x, castType))
 
-  def tanh(x: LeftExpression): Expression                     = Expr.function("tanh", x.build())
-  def tanh(x: LeftExpression, castType: CastType): Expression = tanh(cast(x, castType))
+  def tanh(x: LeftExpression): LeftExpression                     = Expr.function("tanh", x.build())
+  def tanh(x: LeftExpression, castType: CastType): LeftExpression = tanh(cast(x, castType))
 
-  def todegrees(x: LeftExpression): Expression                     = Expr.function("todegrees", x.build())
-  def todegrees(x: LeftExpression, castType: CastType): Expression = todegrees(cast(x, castType))
+  def todegrees(x: LeftExpression): LeftExpression = Expr.function("todegrees", x.build())
+  def todegrees(x: LeftExpression, castType: CastType): LeftExpression =
+    todegrees(cast(x, castType))
 
-  def toradians(x: LeftExpression): Expression                     = Expr.function("toradians", x.build())
-  def toradians(x: LeftExpression, castType: CastType): Expression = toradians(cast(x, castType))
+  def toradians(x: LeftExpression): LeftExpression = Expr.function("toradians", x.build())
+  def toradians(x: LeftExpression, castType: CastType): LeftExpression =
+    toradians(cast(x, castType))
 
-  def ulp(x: LeftExpression): Expression                     = Expr.function("ulp", x.build())
-  def ulp(x: LeftExpression, castType: CastType): Expression = ulp(cast(x, castType))
+  def ulp(x: LeftExpression): LeftExpression                     = Expr.function("ulp", x.build())
+  def ulp(x: LeftExpression, castType: CastType): LeftExpression = ulp(cast(x, castType))
 
 }
 
