@@ -22,6 +22,9 @@ import ing.wbaa.druid.definitions._
 import ing.wbaa.druid.dql.Dim.DimType
 import ing.wbaa.druid.dql.expressions._
 
+// scalastyle:off file.size.limit
+// scalastyle:off number.of.methods
+
 /**
   * This class represents a single dimension in a Druid datasource, along with all operations that can be
   * performed in a query (e.g., filtering, aggregation, post-aggregation, etc.).
@@ -31,7 +34,6 @@ import ing.wbaa.druid.dql.expressions._
   * @param outputTypeOpt The resulting output type
   * @param extractionFnOpt An extraction function to apply in this dimension
   */
-// scalastyle:off
 case class Dim private[dql] (name: String,
                              outputNameOpt: Option[String] = None,
                              outputTypeOpt: Option[String] = None,
@@ -144,7 +146,9 @@ case class Dim private[dql] (name: String,
     ExpressionOps.lessThanEq(Expr(this.getName), Expr(value))
 
   def unary_!(): Expression = ExpressionOps.not(this.getName)
+  // scalastyle:off method.name
   def unary_-(): Expression = ExpressionOps.minus(this.getName)
+  // scalastyle:on method.name
 
   /**
     * @return column-comparison filtering expression between this and the specified dimensions.
@@ -736,7 +740,9 @@ case class Dim private[dql] (name: String,
     override def asExpression: Expression = ExpressionOps.divide(Expr(getName), Expr(value))
   }
 
+  // scalastyle:off method.name
   def %(value: Double): Expression = ExpressionOps.modulo(Expr(getName), Expr(value))
+  // scalastyle:on method.name
 
   /**
     * Arithmetic division post-aggregator
@@ -782,7 +788,9 @@ case class Dim private[dql] (name: String,
     override def asExpression: Expression = ExpressionOps.divide(Expr(getName), Expr(other.getName))
   }
 
+  // scalastyle:off method.name
   def %(other: Dim): Expression = ExpressionOps.modulo(Expr(getName), Expr(other.getName))
+  // scalastyle:on method.name
 
   /**
     * Arithmetic division post-aggregator
@@ -795,7 +803,6 @@ case class Dim private[dql] (name: String,
   def hyperUniqueCardinality: HyperUniqueCardinalityPostAgg =
     HyperUniqueCardinalityPostAgg(this.name)
 }
-// scalastyle:on
 
 object Dim {
 
@@ -809,3 +816,5 @@ object Dim {
     val FLOAT: DimType  = Value(2, "FLOAT")
   }
 }
+// scalastyle:on file.size.limit
+// scalastyle:on number.of.methods

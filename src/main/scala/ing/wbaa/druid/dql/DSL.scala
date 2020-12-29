@@ -16,10 +16,9 @@
  */
 
 package ing.wbaa.druid.dql
-// scalastyle:off
+
 import ing.wbaa.druid.definitions._
 import ing.wbaa.druid.dql.expressions._
-
 import scala.language.implicitConversions
 
 object DSL
@@ -90,29 +89,31 @@ object DSL
     def <(s: Dim): BaseExpression   = s > value
     def <=(s: Dim): BaseExpression  = s >= value
 
-    //def +(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.PLUS)
+    // def +(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.PLUS)
     def +(s: Dim): BaseArithmeticExpression = BaseArithmeticExpression(
       portAgg = arithmeticPostAgg(s, ArithmeticFunction.PLUS),
       expression = ExpressionOps.add(Expr(value), Expr(s.getName))
     )
-    //def -(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.MINUS)
+    // def -(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.MINUS)
     def -(s: Dim): BaseArithmeticExpression = BaseArithmeticExpression(
       portAgg = arithmeticPostAgg(s, ArithmeticFunction.MINUS),
       expression = ExpressionOps.subtract(Expr(value), Expr(s.getName))
     )
-    //def *(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.MULT)
+    // def *(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.MULT)
     def *(s: Dim): BaseArithmeticExpression = BaseArithmeticExpression(
       portAgg = arithmeticPostAgg(s, ArithmeticFunction.MULT),
       expression = ExpressionOps.multiply(Expr(value), Expr(s.getName))
     )
 
-    //def /(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.DIV)
+    // def /(s: Dim): ArithmeticPostAgg = arithmeticPostAgg(s, ArithmeticFunction.DIV)
     def /(s: Dim): BaseArithmeticExpression = BaseArithmeticExpression(
       portAgg = arithmeticPostAgg(s, ArithmeticFunction.DIV),
       expression = ExpressionOps.divide(Expr(value), Expr(s.getName))
     )
 
+    // scalastyle:off method.name
     def %(s: Dim): Expression = ExpressionOps.modulo(Expr(value), Expr(s.getName))
+    // scalastyle:on method.name
 
     def quotient(s: Dim): ArithmeticPostAgg =
       arithmeticPostAgg(s, ArithmeticFunction.QUOT)
@@ -154,10 +155,6 @@ object DSL
   case class LeftPart() extends JoinPart {
     def apply(dimName: String): LeftExpression = new LeftExpression(dimName)
     def dim(dimName: String): LeftExpression   = new LeftExpression(dimName)
-
-    // todo: this is an alternative design. We can instead add all functions inside the leftpart
-//    def abs(dimName: String, castType: CastType = CastType.Double): Expression =
-//      ExpressionFunctions.abs(ExpressionFunctions.cast(apply(dimName), castType))
   }
   case class RightPart(prefix: String) extends JoinPart {
     def apply(dimName: String): RightExpression = new RightExpression(prefix + dimName)
@@ -183,4 +180,3 @@ object DSL
   }
 
 }
-// scalastyle:on

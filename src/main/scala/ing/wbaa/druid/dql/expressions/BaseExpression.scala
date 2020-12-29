@@ -16,7 +16,7 @@
  */
 
 package ing.wbaa.druid.dql.expressions
-// scalastyle:off
+
 trait BaseExpression { self =>
 
   def asFilteringExpression: FilteringExpression
@@ -62,4 +62,3 @@ object BaseArithmeticExpression {
       override def asExpression: Expression               = expression
     }
 }
-// scalastyle:on

@@ -187,7 +187,7 @@ case class Bound(dimension: String,
 
   override protected[dql] def createFilter: Filter =
     BoundFilter(dimension, lower, upper, lowerStrict, upperStrict, ordering, extractionFn)
-  // scalastyle:off
+
   override def asFilteringExpression: FilteringExpression = this
 
   override def asExpression: Expression = {
@@ -199,7 +199,6 @@ case class Bound(dimension: String,
 
     Expr(s"($lowerPart $dimension $upperPart)")
   }
-  // scalastyle:on
 }
 
 class ColumnComparison(dimensions: Iterable[Dim])

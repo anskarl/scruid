@@ -17,8 +17,6 @@
 
 package ing.wbaa.druid.dql
 
-// scalastyle:off
-
 import ing.wbaa.druid._
 import ing.wbaa.druid.client.DruidHttpClient
 import ing.wbaa.druid.definitions._
@@ -27,7 +25,6 @@ import io.circe.generic.auto._
 import org.scalatest.concurrent._
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -57,7 +54,7 @@ class DQLDatasourceSpec extends AnyWordSpec with Matchers with ScalaFutures {
       mapped_country_iso3_code: Option[String],
       mapped_country_name: Option[String]
   )
-//Inline(Seq("iso2_code_uppercase", "iso2_code_lowercase", "iso3_code", "name"), countryData)
+
   "DQL query with datasource" should {
 
     "successfully be interpreted by Druid when datasource is Table" in {
@@ -80,16 +77,17 @@ class DQLDatasourceSpec extends AnyWordSpec with Matchers with ScalaFutures {
       val query: ScanQuery = DQL
         .scan()
         .interval("0000/3000")
-        .from(InlineDatasources.countryDatasource)
+        .from(CountryCodeData.datasource)
         .build()
 
       val request = query.execute()
 
       whenReady(request) { response =>
-        val expected = InlineDatasources.countryData
+        val expected = CountryCodeData.data
           .map {
             case code2_uppercased :: code2_lowercased :: code3 :: name :: Nil =>
               CountryCodes(code2_uppercased, code2_lowercased, code3, name)
+            case _ => throw new IllegalStateException("Invalid country code data")
           }
 
         response.list[CountryCodes] shouldEqual expected
@@ -114,7 +112,7 @@ class DQLDatasourceSpec extends AnyWordSpec with Matchers with ScalaFutures {
         .from(
           Table("wikipedia")
             .join(
-              right = InlineDatasources.countryDatasource,
+              right = CountryCodeData.datasource,
               prefix = "mapped_country_",
               condition = (l, r) => l("countryIsoCode") === r("iso2_code_uppercase")
             )
@@ -137,5 +135,3 @@ class DQLDatasourceSpec extends AnyWordSpec with Matchers with ScalaFutures {
   }
 
 }
-
-// scalastyle:on

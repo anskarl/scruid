@@ -17,11 +17,13 @@
 
 package ing.wbaa.druid.dql.expressions
 
-// scalastyle:off
-
 import ca.mrvisser.sealerate
 import ing.wbaa.druid._
 
+// scalastyle:off todo.comment
+// scalastyle:off number.of.methods
+
+// scalastyle:off method.name
 sealed trait Expression {
 
   def build(): String
@@ -39,8 +41,8 @@ sealed trait Expression {
   def %(other: Expression): Expression = ExpressionOps.modulo(this, other)
 
   // Binary additive
-  def +(other: Expression): Expression = ExpressionOps.multiply(this, other)
-  def -(other: Expression): Expression = ExpressionOps.multiply(this, other)
+  def +(other: Expression): Expression = ExpressionOps.add(this, other)
+  def -(other: Expression): Expression = ExpressionOps.subtract(this, other)
 
   // Binary Comparison
   def <(other: Expression): Expression  = ExpressionOps.lessThan(this, other)
@@ -55,10 +57,11 @@ sealed trait Expression {
   def and(other: Expression): Expression = ExpressionOps.and(this, other)
   def or(other: Expression): Expression  = ExpressionOps.or(this, other)
 }
+// scalastyle:on method.name
 
 object ExpressionOps {
 
-  private object BinaryOps extends Enumeration {
+  object BinaryOps extends Enumeration {
     val Power    = Value("^")
     val Multiply = Value(" * ")
     val Divide   = Value(" / ")
@@ -77,6 +80,8 @@ object ExpressionOps {
     val And = Value(" && ")
     val Or  = Value(" || ")
   }
+
+  def lit[T](n: T): LeftExpression = new LeftExpression(n.toString)
 
   @inline
   private def binaryExpression(left: Expression,
@@ -159,6 +164,18 @@ object Expr {
 
 class LeftExpression(value: String) extends Expression {
   override def build(): String = this.value
+
+  def cast(to: CastType): LeftExpression = GeneralFunctions.cast(this, to)
+
+  def cast(to: String): LeftExpression =
+    cast(CastType.decode(to).getOrElse(throw new IllegalArgumentException))
+
+  // Binary additive
+  def +(other: LeftExpression): LeftExpression =
+    new LeftExpression(s"${this.build()}+${other.build()}")
+
+  def -(other: LeftExpression): LeftExpression =
+    new LeftExpression(s"${this.build()}-${other.build()}")
 }
 
 class RightExpression(value: String) extends Expression {
@@ -196,7 +213,9 @@ object CaseSearched {
   }
 
   class CaseBuilder private[expressions] () extends CaseSearchedBuilder { self =>
+    // scalastyle:off var.field
     private var caseStatements = Seq.empty[(Expression, Expression)]
+    // scalastyle:on var.field
 
     def when(condition: Expression, result: Expression): self.type = {
       caseStatements :+= condition -> result
@@ -235,8 +254,9 @@ object CaseSimple {
 
   class CaseBuilder private[expressions] (expression: Expression) extends CaseSimpleBuilder {
     self =>
-
+    // scalastyle:off var.field
     private var valueResults = Seq.empty[(Expression, Expression)]
+    // scalastyle:on var.field
 
     def when(condition: Expression, result: Expression): self.type = {
       valueResults :+= condition -> result
@@ -316,6 +336,8 @@ trait GeneralFunctions {
   // todo bloom_filter_test
 
 }
+
+object GeneralFunctions extends GeneralFunctions
 
 trait StringFunctions {
 
@@ -484,8 +506,9 @@ trait TimeFunctions {
 trait MathFunctions {
   import ExpressionFunctions.cast
 
-  def abs(x: LeftExpression): Expression                     = Expr.function("abs", x.build())
-  def abs(x: LeftExpression, castType: CastType): Expression = abs(cast(x, castType))
+  // todo all should return LeftExpression
+  def abs(x: LeftExpression): LeftExpression                     = new LeftExpression(s"abs(${x.build()})")
+  def abs(x: LeftExpression, castType: CastType): LeftExpression = abs(cast(x, castType))
 
   def acos(x: LeftExpression): Expression                     = Expr.function("acos", x.build())
   def acos(x: LeftExpression, castType: CastType): Expression = acos(cast(x, castType))
@@ -496,11 +519,6 @@ trait MathFunctions {
   def atan(x: LeftExpression): Expression                     = Expr.function("atan", x.build())
   def atan(x: LeftExpression, castType: CastType): Expression = atan(cast(x, castType))
 
-//  def atan2[@specialized(Long, Double) T](x: T, y: T): Expression = Expr.function("atan2", x, y)
-//  def atan2[@specialized(Long, Double) T](x: LeftExpression, y: T): Expression =
-//    Expr.function("atan2", x.build(), y)
-//  def atan2[@specialized(Long, Double) T](x: T, y: LeftExpression): Expression =
-//    Expr.function("atan2", x, y.build())
   def atan2(x: LeftExpression, y: LeftExpression): Expression =
     Expr.function("atan2", x.build(), y.build())
 
@@ -516,14 +534,9 @@ trait MathFunctions {
   def ceil(x: LeftExpression): Expression                     = Expr.function("ceil", x.build())
   def ceil(x: LeftExpression, castType: CastType): Expression = ceil(cast(x, castType))
 
-//  def copysign[@specialized(Long, Double) T](x: T, y: T): Expression =
-//    Expr.function("copysign", x, y)
-//  def copysign[@specialized(Long, Double) T](x: LeftExpression, y: T): Expression =
-//    Expr.function("copysign", x.build(), y)
-//  def copysign[@specialized(Long, Double) T](x: T, y: LeftExpression): Expression =
-//    Expr.function("copysign", x, y.build())
   def copysign(x: LeftExpression, y: LeftExpression): Expression =
     Expr.function("copysign", x.build(), y.build())
+
   def copysign(x: LeftExpression,
                y: LeftExpression,
                xCastType: CastType,
@@ -539,8 +552,10 @@ trait MathFunctions {
   def cot(x: LeftExpression): Expression                     = Expr.function("cot", x.build())
   def cot(x: LeftExpression, castType: CastType): Expression = cot(cast(x, castType))
 
-  def div(x: LeftExpression): Expression                     = Expr.function("div", x.build())
-  def div(x: LeftExpression, castType: CastType): Expression = div(cast(x, castType))
+  def div(x: LeftExpression, y: LeftExpression): Expression =
+    Expr.function("div", x.build(), y.build())
+  def div(x: LeftExpression, y: LeftExpression, castType: CastType): Expression =
+    div(cast(x, castType), cast(y, castType))
 
   def exp(x: LeftExpression): Expression                     = Expr.function("exp", x.build())
   def exp(x: LeftExpression, castType: CastType): Expression = exp(cast(x, castType))
@@ -548,119 +563,148 @@ trait MathFunctions {
   def expm1(x: LeftExpression): Expression                     = Expr.function("expm1", x.build())
   def expm1(x: LeftExpression, castType: CastType): Expression = expm1(cast(x, castType))
 
-  def floor[@specialized(Long, Double) T](x: T): Expression = Expr.function("floor", x)
-  def floor(x: LeftExpression): Expression                  = Expr.function("floor", x.build())
+  def floor(x: LeftExpression): Expression                     = Expr.function("floor", x.build())
+  def floor(x: LeftExpression, castType: CastType): Expression = floor(cast(x, castType))
 
-  def getExponent[@specialized(Long, Double) T](x: T): Expression = Expr.function("getExponent", x)
-  def getExponent(x: LeftExpression): Expression                  = Expr.function("getExponent", x.build())
+  def getExponent(x: LeftExpression): Expression = Expr.function("getExponent", x.build())
+  def getExponent(x: LeftExpression, castType: CastType): Expression =
+    getExponent(cast(x, castType))
 
-  def hypot[@specialized(Long, Double) T](x: T, y: T): Expression = Expr.function("hypot", x, y)
-  def hypot[@specialized(Long, Double) T](x: LeftExpression, y: T): Expression =
-    Expr.function("hypot", x.build(), y)
-  def hypot[@specialized(Long, Double) T](x: T, y: LeftExpression): Expression =
-    Expr.function("hypot", x, y.build())
   def hypot(x: LeftExpression, y: LeftExpression): Expression =
     Expr.function("hypot", x.build(), y.build())
 
-  def log[@specialized(Long, Double) T](x: T): Expression = Expr.function("hypot", x)
-  def log(x: LeftExpression): Expression                  = Expr.function("hypot", x.build())
+  def hypot(x: LeftExpression,
+            y: LeftExpression,
+            xCastType: CastType,
+            yCastType: CastType): Expression =
+    hypot(cast(x, xCastType), cast(y, yCastType))
 
-  def log10[@specialized(Long, Double) T](x: T): Expression = Expr.function("log10", x)
-  def log10(x: LeftExpression): Expression                  = Expr.function("log10", x.build())
+  def log(x: LeftExpression): Expression                     = Expr.function("log", x.build())
+  def log(x: LeftExpression, castType: CastType): Expression = log(cast(x, castType))
 
-  def log1p[@specialized(Long, Double) T](x: T): Expression = Expr.function("log1p", x)
-  def log1p(x: LeftExpression): Expression                  = Expr.function("log1p", x.build())
+  def log10(x: LeftExpression): Expression                     = Expr.function("log10", x.build())
+  def log10(x: LeftExpression, castType: CastType): Expression = log10(cast(x, castType))
 
-  def max[@specialized(Long, Double) T](x: T, y: T): Expression = Expr.function("max", x, y)
-  def max[@specialized(Long, Double) T](x: LeftExpression, y: T): Expression =
-    Expr.function("max", x.build(), y)
-  def max[@specialized(Long, Double) T](x: T, y: LeftExpression): Expression =
-    Expr.function("max", x, y.build())
+  def log1p(x: LeftExpression): Expression                     = Expr.function("log1p", x.build())
+  def log1p(x: LeftExpression, castType: CastType): Expression = log1p(cast(x, castType))
+
   def max(x: LeftExpression, y: LeftExpression): Expression =
     Expr.function("max", x.build(), y.build())
 
-  def min[@specialized(Long, Double) T](x: T, y: T): Expression = Expr.function("min", x, y)
-  def min[@specialized(Long, Double) T](x: LeftExpression, y: T): Expression =
-    Expr.function("min", x.build(), y)
-  def min[@specialized(Long, Double) T](x: T, y: LeftExpression): Expression =
-    Expr.function("min", x, y.build())
+  def max(x: LeftExpression,
+          y: LeftExpression,
+          xCastType: CastType,
+          yCastType: CastType): Expression =
+    max(cast(x, xCastType), cast(y, yCastType))
+
   def min(x: LeftExpression, y: LeftExpression): Expression =
     Expr.function("min", x.build(), y.build())
 
-  def nextafter[@specialized(Long, Double) T](x: T, y: T): Expression =
-    Expr.function("nextafter", x, y)
-  def nextafter[@specialized(Long, Double) T](x: LeftExpression, y: T): Expression =
-    Expr.function("nextafter", x.build(), y)
-  def nextafter[@specialized(Long, Double) T](x: T, y: LeftExpression): Expression =
-    Expr.function("nextafter", x, y.build())
-  def nextafter(x: LeftExpression, y: LeftExpression): Expression =
-    Expr.function("nextafter", x.build(), y.build())
+  def min(x: LeftExpression,
+          y: LeftExpression,
+          xCastType: CastType,
+          yCastType: CastType): Expression =
+    min(cast(x, xCastType), cast(y, yCastType))
 
-  def nextUp(x: LeftExpression): Expression = Expr.function("nextUp", x.build())
-  def pi: Expression                        = Expr.function("pi")
+  def nextAfter(x: LeftExpression, y: LeftExpression): Expression =
+    Expr.function("nextAfter", x.build(), y.build())
+
+  def nextAfter(x: LeftExpression,
+                y: LeftExpression,
+                xCastType: CastType,
+                yCastType: CastType): Expression =
+    nextAfter(cast(x, xCastType), cast(y, yCastType))
+
+  def nextUp(x: LeftExpression): Expression                     = Expr.function("nextUp", x.build())
+  def nextUp(x: LeftExpression, castType: CastType): Expression = nextUp(cast(x, castType))
+
+  def pi: Expression = Expr.function("pi")
 
   def pow(x: LeftExpression, y: LeftExpression): Expression =
     Expr.function("pow", x.build(), y.build())
+  def pow(x: LeftExpression,
+          y: LeftExpression,
+          xCastType: CastType,
+          yCastType: CastType): Expression =
+    pow(cast(x, xCastType), cast(y, yCastType))
+
   def remainder(x: LeftExpression, y: LeftExpression): Expression =
     Expr.function("remainder", x.build(), y.build())
+  def remainder(x: LeftExpression,
+                y: LeftExpression,
+                xCastType: CastType,
+                yCastType: CastType): Expression =
+    remainder(cast(x, xCastType), cast(y, yCastType))
 
-  def rint[@specialized(Long, Double) T](x: T): Expression = Expr.function("rint", x)
-  def rint(x: LeftExpression): Expression                  = Expr.function("rint", x.build())
+  def rint(x: LeftExpression): Expression                     = Expr.function("rint", x.build())
+  def rint(x: LeftExpression, castType: CastType): Expression = rint(cast(x, castType))
 
-  def round[@specialized(Long, Double) T](x: T, y: T): Expression = Expr.function("round", x, y)
-  def round[@specialized(Long, Double) T](x: LeftExpression, y: T): Expression =
-    Expr.function("round", x.build(), y)
-  def round[@specialized(Long, Double) T](x: T, y: LeftExpression): Expression =
-    Expr.function("round", x, y.build())
-  def round(x: LeftExpression, y: LeftExpression): Expression =
-    Expr.function("round", x.build(), y.build())
+  def round(x: LeftExpression, scale: LeftExpression): Expression =
+    Expr.function("round", x.build(), scale.cast(CastType.Long).build())
 
-  def scalb[@specialized(Long, Double) T](d: T, sf: T): Expression = Expr.function("scalb", d, sf)
-  def scalb[@specialized(Long, Double) T](d: LeftExpression, sf: T): Expression =
-    Expr.function("scalb", d.build(), sf)
-  def scalb[@specialized(Long, Double) T](d: T, sf: LeftExpression): Expression =
-    Expr.function("scalb", d, sf.build())
+  def round(x: LeftExpression, scale: Int): Expression =
+    Expr.function("round", x.build(), scale.toString)
+
+  def round(x: LeftExpression): Expression = round(x, scale = 0)
+
+  def round(x: LeftExpression, castType: CastType, scale: Int): Expression =
+    round(cast(x, castType), scale)
+  def round(x: LeftExpression, castType: CastType): Expression = round(x, castType, scale = 0)
+
+  def round(x: LeftExpression, scale: LeftExpression, castType: CastType): Expression =
+    round(x.cast(castType), scale)
+
+  def scalb(d: LeftExpression, sf: Int): Expression =
+    Expr.function("scalb", d.build(), sf.toString)
+
   def scalb(d: LeftExpression, sf: LeftExpression): Expression =
     Expr.function("scalb", d.build(), sf.build())
 
-  def signum[@specialized(Long, Double) T](x: T): Expression = Expr.function("signum", x)
-  def signum(x: LeftExpression): Expression                  = Expr.function("signum", x.build())
+  def scalb(d: LeftExpression,
+            sf: LeftExpression,
+            xCastType: CastType,
+            yCastType: CastType): Expression =
+    scalb(cast(d, xCastType), cast(sf, yCastType))
 
-  def sin[@specialized(Long, Double) T](x: T): Expression = Expr.function("sin", x)
-  def sin(x: LeftExpression): Expression                  = Expr.function("sin", x.build())
+  def signum(x: LeftExpression): Expression                     = Expr.function("signum", x.build())
+  def signum(x: LeftExpression, castType: CastType): Expression = signum(cast(x, castType))
 
-  def sinh[@specialized(Long, Double) T](x: T): Expression = Expr.function("sinh", x)
-  def sinh(x: LeftExpression): Expression                  = Expr.function("sinh", x.build())
+  def sin(x: LeftExpression): Expression                     = Expr.function("sin", x.build())
+  def sin(x: LeftExpression, castType: CastType): Expression = sin(cast(x, castType))
 
-  def sqrt[@specialized(Long, Double) T](x: T): Expression = Expr.function("sqrt", x)
-  def sqrt(x: LeftExpression): Expression                  = Expr.function("sqrt", x.build())
+  def sinh(x: LeftExpression): Expression                     = Expr.function("sinh", x.build())
+  def sinh(x: LeftExpression, castType: CastType): Expression = sinh(cast(x, castType))
 
-  def tan[@specialized(Long, Double) T](x: T): Expression = Expr.function("tan", x)
-  def tan(x: LeftExpression): Expression                  = Expr.function("tan", x.build())
+  def sqrt(x: LeftExpression): Expression                     = Expr.function("sqrt", x.build())
+  def sqrt(x: LeftExpression, castType: CastType): Expression = sqrt(cast(x, castType))
 
-  def tanh[@specialized(Long, Double) T](x: T): Expression = Expr.function("tanh", x)
-  def tanh(x: LeftExpression): Expression                  = Expr.function("tanh", x.build())
+  def tan(x: LeftExpression): Expression                     = Expr.function("tan", x.build())
+  def tan(x: LeftExpression, castType: CastType): Expression = tan(cast(x, castType))
 
-  def todegrees[@specialized(Long, Double) T](x: T): Expression = Expr.function("todegrees", x)
-  def todegrees(x: LeftExpression): Expression                  = Expr.function("todegrees", x.build())
+  def tanh(x: LeftExpression): Expression                     = Expr.function("tanh", x.build())
+  def tanh(x: LeftExpression, castType: CastType): Expression = tanh(cast(x, castType))
 
-  def toradians[@specialized(Long, Double) T](x: T): Expression = Expr.function("toradians", x)
-  def toradians(x: LeftExpression): Expression                  = Expr.function("toradians", x.build())
+  def todegrees(x: LeftExpression): Expression                     = Expr.function("todegrees", x.build())
+  def todegrees(x: LeftExpression, castType: CastType): Expression = todegrees(cast(x, castType))
 
-  def ulp[@specialized(Long, Double) T](x: T): Expression = Expr.function("ulp", x)
-  def ulp(x: LeftExpression): Expression                  = Expr.function("ulp", x.build())
+  def toradians(x: LeftExpression): Expression                     = Expr.function("toradians", x.build())
+  def toradians(x: LeftExpression, castType: CastType): Expression = toradians(cast(x, castType))
+
+  def ulp(x: LeftExpression): Expression                     = Expr.function("ulp", x.build())
+  def ulp(x: LeftExpression, castType: CastType): Expression = ulp(cast(x, castType))
 
 }
 
 object MathFunctions extends MathFunctions
 
-trait ArrayFunctions {}
+trait ArrayFunctions
 
-trait ApplyFunctions {}
+trait ApplyFunctions
 
-trait ReductionFunctions {}
+trait ReductionFunctions
 
 trait IPAddressFunctions
 
 object ExpressionFunctions extends GeneralFunctions with StringFunctions with MathFunctions
-// scalastyle:on
+// scalastyle:on todo.comment
+// scalastyle:on number.of.methods
