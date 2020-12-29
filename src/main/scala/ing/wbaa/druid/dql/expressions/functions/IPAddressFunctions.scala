@@ -17,6 +17,19 @@
 
 package ing.wbaa.druid.dql.expressions.functions
 
-trait IPAddressFunctions
+import ing.wbaa.druid.dql.expressions.{ Expression, LeftExpression }
+
+trait IPAddressFunctions {
+
+  def ipv4Match(address: LeftExpression, subnet: LeftExpression): LeftExpression =
+    Expression.function("ipv4_match", address.build(), subnet.build())
+
+  def ipv4Parse(address: LeftExpression): LeftExpression =
+    Expression.function("ipv4_parse", address.build())
+
+  def ipv4Stringify(address: LeftExpression): LeftExpression =
+    Expression.function("ipv4_stringify", address.build())
+
+}
 
 object IPAddressFunctions extends IPAddressFunctions

@@ -111,6 +111,13 @@ object Expression {
   def function(name: String, args: Iterable[String]): LeftExpression =
     new LeftExpression(s"${name}(${args.mkString(",")})")
 
+//  def apply(v: String): LeftExpression        = new LeftExpression(v)
+//  def apply[T: Numeric](v: T): LeftExpression = new LeftExpression(v.toString)
+//
+//  def apply[T <: CharSequence](values: Iterable[T]): LeftExpression =
+//    new LeftExpression(values.mkString("[", ",", "]"))
+//  def apply[T: Numeric](values: Iterable[T]): LeftExpression = this.apply(values.map(_.toString))
+
 }
 
 case class BaseExpression(value: String) extends Expression {

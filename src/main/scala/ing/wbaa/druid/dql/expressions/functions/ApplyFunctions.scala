@@ -17,6 +17,28 @@
 
 package ing.wbaa.druid.dql.expressions.functions
 
-trait ApplyFunctions
+import ing.wbaa.druid.dql.expressions.{ Expression, LeftExpression }
+
+trait ApplyFunctions {
+
+  def map(lambda: String, arr: LeftExpression): LeftExpression =
+    Expression.function("map", lambda, arr.build())
+
+  def cartesianMap(lambda: String, arr: LeftExpression*): LeftExpression =
+    Expression.function("cartesian_map", lambda, arr.map(_.build()))
+
+  def filter(lambda: String, arr: LeftExpression): LeftExpression =
+    Expression.function("filter", lambda, arr.build())
+
+  def cartesianFold(lambda: String, arr: LeftExpression*): LeftExpression =
+    Expression.function("cartesian_fold", lambda, arr.map(_.build()))
+
+  def any(lambda: String, arr: LeftExpression): LeftExpression =
+    Expression.function("any", lambda, arr.build())
+
+  def all(lambda: String, arr: LeftExpression): LeftExpression =
+    Expression.function("all", lambda, arr.build())
+
+}
 
 object ApplyFunctions extends ApplyFunctions

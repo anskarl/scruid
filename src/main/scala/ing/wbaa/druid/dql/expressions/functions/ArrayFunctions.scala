@@ -17,6 +17,52 @@
 
 package ing.wbaa.druid.dql.expressions.functions
 
-trait ArrayFunctions
+import ing.wbaa.druid.dql.expressions.{ Expression, LeftExpression }
+
+trait ArrayFunctions {
+
+  def array(expr: LeftExpression*): LeftExpression =
+    Expression.function("array", expr.map(_.build()))
+
+  def arrayLength(arr: LeftExpression): LeftExpression =
+    Expression.function("array_length", arr.build())
+
+  def arrayOffset(arr: LeftExpression, index: Long): LeftExpression =
+    Expression.function("array_offset", arr.build(), index)
+
+  def arrayOrdinal(arr: LeftExpression, index: Long): LeftExpression =
+    Expression.function("array_ordinal", arr.build(), index)
+
+  def arrayContains(arr: LeftExpression, expr: LeftExpression): LeftExpression =
+    Expression.function("array_contains", arr.build(), expr.build())
+
+  def arrayOverlap(arr1: LeftExpression, arr2: LeftExpression): LeftExpression =
+    Expression.function("array_overlap", arr1.build(), arr2.build())
+
+  def arrayOffsetOf(arr: LeftExpression, expr: LeftExpression): LeftExpression =
+    Expression.function("array_offset_of", arr.build(), expr.build())
+
+  def arrayOrdinalOf(arr: LeftExpression, expr: LeftExpression): LeftExpression =
+    Expression.function("array_ordinal_of", arr.build(), expr.build())
+
+  def arrayPrepend(expr: LeftExpression, arr: LeftExpression): LeftExpression =
+    Expression.function("array_prepend", expr.build(), arr.build())
+
+  def arrayAppend(arr: LeftExpression, expr: LeftExpression): LeftExpression =
+    Expression.function("array_append", arr.build(), expr.build())
+
+  def arrayConcat(arr1: LeftExpression, arr2: LeftExpression): LeftExpression =
+    Expression.function("array_concat", arr1.build(), arr2.build())
+
+  def arraySlice(arr1: LeftExpression, start: Long, end: Long): LeftExpression =
+    Expression.function("array_slice", arr1.build(), start, end)
+
+  def arrayToString(arr: LeftExpression, str: String): LeftExpression =
+    Expression.function("array_to_string", arr.build(), str)
+
+  def stringToArray(str1: LeftExpression, str2: String): LeftExpression =
+    Expression.function("string_to_array", str1.build(), str2)
+
+}
 
 object ArrayFunctions extends ArrayFunctions
