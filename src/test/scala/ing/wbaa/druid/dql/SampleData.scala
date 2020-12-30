@@ -16,8 +16,9 @@
  */
 
 package ing.wbaa.druid.dql
+// scalastyle:off
+import ing.wbaa.druid.definitions.{ Inline, MultiValEntry, SingleValEntry }
 
-import ing.wbaa.druid.definitions.Inline
 import java.util.Locale
 
 object CountryCodeData {
@@ -30,4 +31,29 @@ object CountryCodeData {
 
   final val datasource: Inline =
     Inline(Seq("iso2_code_uppercase", "iso2_code_lowercase", "iso3_code", "name"), data)
+
 }
+
+object LanguageCodeData {
+
+  final val data = Locale.getAvailableLocales
+    .filter(_.getCountry.nonEmpty)
+    .map(locale => locale.getLanguage -> locale.getCountry)
+    .groupBy { case (langCode, _) => langCode }
+    .map {
+      case (langCode, entries) =>
+        val countries = entries.map { case (_, countryCode) => countryCode }.distinct
+        SingleValEntry(langCode) :: SingleValEntry(countries.mkString(",")) :: MultiValEntry(
+          countries
+        ) :: Nil
+    }
+
+  final val datasource: Inline =
+    Inline(Seq("iso2_lang", "csv_iso2_countries", "arr_iso2_countries"), data)
+
+  case class LanguageCodeRow(iso2_lang: String,
+                             csv_iso2_countries: String,
+                             arr_iso2_countries: Seq[String])
+
+}
+// scalastyle:on

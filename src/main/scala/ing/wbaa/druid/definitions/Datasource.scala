@@ -87,9 +87,29 @@ case class Union(dataSources: Iterable[String]) extends Datasource {
   override val `type`: DatasourceType = DatasourceType.Union
 }
 
-case class Inline(columnNames: Iterable[String], rows: Iterable[Iterable[String]])
+sealed trait InlineEntry
+case class SingleValEntry(value: String)           extends InlineEntry
+case class MultiValEntry(values: Iterable[String]) extends InlineEntry
+
+object InlineEntry {
+  implicit val encoder: Encoder[InlineEntry] = new Encoder[InlineEntry] {
+    override def apply(entry: InlineEntry): Json =
+      entry match {
+        case SingleValEntry(value) => Json.fromString(value)
+        case MultiValEntry(values) => Json.fromValues(values.map(Json.fromString))
+      }
+  }
+}
+
+case class Inline(columnNames: Iterable[String], rows: Iterable[Iterable[InlineEntry]])
     extends RightHandDatasource {
   override val `type`: DatasourceType = DatasourceType.Inline
+}
+
+object Inline {
+  def apply[_ <: String: ClassTag](columnNames: Iterable[String],
+                                   rows: Iterable[Iterable[String]]): Inline =
+    new Inline(columnNames, rows.map(_.map(SingleValEntry)))
 }
 
 case class Query(query: DruidNativeQuery) extends RightHandDatasource {

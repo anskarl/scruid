@@ -17,7 +17,7 @@
 
 package ing.wbaa.druid.dql.expressions.functions
 
-import ing.wbaa.druid.dql.expressions.{ Expression, LeftExpression }
+import ing.wbaa.druid.dql.expressions.{ Expression, LeftExpression, RightExpression }
 
 trait ArrayFunctions {
 
@@ -34,6 +34,9 @@ trait ArrayFunctions {
     Expression.function("array_ordinal", arr.build(), index)
 
   def arrayContains(arr: LeftExpression, expr: LeftExpression): LeftExpression =
+    Expression.function("array_contains", arr.build(), expr.build())
+
+  def arrayContains(arr: LeftExpression, expr: RightExpression): LeftExpression =
     Expression.function("array_contains", arr.build(), expr.build())
 
   def arrayOverlap(arr1: LeftExpression, arr2: LeftExpression): LeftExpression =
@@ -58,10 +61,10 @@ trait ArrayFunctions {
     Expression.function("array_slice", arr1.build(), start, end)
 
   def arrayToString(arr: LeftExpression, str: String): LeftExpression =
-    Expression.function("array_to_string", arr.build(), str)
+    Expression.function("array_to_string", arr.build(), s"'$str'")
 
   def stringToArray(str1: LeftExpression, str2: String): LeftExpression =
-    Expression.function("string_to_array", str1.build(), str2)
+    Expression.function("string_to_array", str1.build(), s"'$str2'")
 
 }
 

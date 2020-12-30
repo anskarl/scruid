@@ -180,7 +180,7 @@ private[expressions] trait DQLMathExpressionsScenarios {
     ),
     MathExpressionTestScenario(
       functionName = "div",
-      leftPart = leftExpr => div(lit(1), leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => div(lit(1), leftExpr.cast(CastType.Double)),
       expectedNumResults = 2,
       mathFunction = x => (1 / x).toLong
     ),
@@ -279,7 +279,8 @@ private[expressions] trait DQLMathExpressionsScenarios {
     MathExpressionTestScenario(
       functionName = "remainder",
       leftPart = leftExpr =>
-        remainder(leftExpr.cast("DOUBLE"), leftExpr.cast("DOUBLE") + leftExpr.cast("DOUBLE")),
+        remainder(leftExpr.cast(CastType.Double),
+                  leftExpr.cast(CastType.Double) + leftExpr.cast(CastType.Double)),
       expectedNumResults = 2,
       mathFunction = x => math.IEEEremainder(x, x + x)
     ),
@@ -291,68 +292,68 @@ private[expressions] trait DQLMathExpressionsScenarios {
     ),
     MathExpressionTestScenario(
       functionName = "round",
-      leftPart = leftExpr => round(leftExpr.cast("DOUBLE"), 1),
+      leftPart = leftExpr => round(leftExpr.cast(CastType.Double), 1),
       expectedNumResults = 2,
       mathFunction =
         number => BigDecimal.decimal(number).setScale(1, BigDecimal.RoundingMode.HALF_UP).toDouble
     ),
     MathExpressionTestScenario(
       functionName = "scalb",
-      leftPart = leftExpr => scalb(leftExpr.cast("DOUBLE"), 2),
+      leftPart = leftExpr => scalb(leftExpr.cast(CastType.Double), 2),
       expectedNumResults = 2,
       mathFunction = number => java.lang.Math.scalb(number, 2)
     ),
     MathExpressionTestScenario(
       functionName = "signum",
-      leftPart = leftExpr => signum(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => signum(leftExpr.cast(CastType.Double)),
       expectedNumResults = 4,
       mathFunction = number => math.signum(number)
     ),
     MathExpressionTestScenario(
       functionName = "sin",
-      leftPart = leftExpr => sin(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => sin(leftExpr.cast(CastType.Double)),
       expectedNumResults = 2,
       mathFunction = number => math.sin(number)
     ),
     MathExpressionTestScenario(
       functionName = "sinh",
-      leftPart = leftExpr => sinh(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => sinh(leftExpr.cast(CastType.Double)),
       expectedNumResults = 2,
       mathFunction = number => math.sinh(number)
     ),
     MathExpressionTestScenario(
       functionName = "sqrt",
-      leftPart = leftExpr => sqrt(abs(leftExpr.cast("DOUBLE"))),
+      leftPart = leftExpr => sqrt(abs(leftExpr.cast(CastType.Double))),
       expectedNumResults = 4,
       mathFunction = number => math.sqrt(math.abs(number))
     ),
     MathExpressionTestScenario(
       functionName = "tan",
-      leftPart = leftExpr => tan(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => tan(leftExpr.cast(CastType.Double)),
       expectedNumResults = 2,
       mathFunction = number => math.tan(number)
     ),
     MathExpressionTestScenario(
       functionName = "tanh",
-      leftPart = leftExpr => tanh(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => tanh(leftExpr.cast(CastType.Double)),
       expectedNumResults = 2,
       mathFunction = number => math.tanh(number)
     ),
     MathExpressionTestScenario(
       functionName = "todegrees",
-      leftPart = leftExpr => todegrees(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => todegrees(leftExpr.cast(CastType.Double)),
       expectedNumResults = 2,
       mathFunction = number => math.toDegrees(number)
     ),
     MathExpressionTestScenario(
       functionName = "toradians",
-      leftPart = leftExpr => toradians(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => toradians(leftExpr.cast(CastType.Double)),
       expectedNumResults = 2,
       mathFunction = number => math.toRadians(number)
     ),
     MathExpressionTestScenario(
       functionName = "ulp",
-      leftPart = leftExpr => ulp(leftExpr.cast("DOUBLE")),
+      leftPart = leftExpr => ulp(leftExpr.cast(CastType.Double)),
       expectedNumResults = 5,
       mathFunction = number => math.ulp(number)
     )
