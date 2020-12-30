@@ -17,18 +17,18 @@
 
 package ing.wbaa.druid
 
-import java.time.ZonedDateTime
-
-import scala.concurrent.{ ExecutionContext, Future }
-
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import ca.mrvisser.sealerate
 import ing.wbaa.druid.definitions._
 import ing.wbaa.druid.definitions.QueryContext.{ QueryContextParam, QueryContextValue }
+import ing.wbaa.druid.dql.Dim
+import ing.wbaa.druid.dql.expressions.Expression
 import io.circe._
 import io.circe.generic.auto._
 import io.circe.syntax._
+import java.time.ZonedDateTime
+import scala.concurrent.{ ExecutionContext, Future }
 
 sealed trait QueryType extends Enum with CamelCaseEnumStringEncoder
 object QueryType extends EnumCodec[QueryType] {
@@ -65,9 +65,28 @@ object DruidQuery {
 
 }
 
+case class ExpressionVirtualColumn(name: String,
+                                   expression: String,
+                                   outputType: Option[String] = None) {
+  val `type` = "expression"
+}
+
+object ExpressionVirtualColumn {
+  implicit val encoder: Encoder[ExpressionVirtualColumn] = new Encoder[ExpressionVirtualColumn] {
+    override def apply(vc: ExpressionVirtualColumn): Json =
+      vc.asJsonObject.add("type", vc.`type`.asJson).asJson
+  }
+
+  def apply(name: String,
+            expression: Expression,
+            outputType: Option[Dim.DimType]): ExpressionVirtualColumn =
+    ExpressionVirtualColumn(name, expression.build(), outputType.map(_.toString))
+}
+
 sealed trait DruidNativeQuery extends DruidQuery {
 
   val dataSource: Datasource
+  val virtualColumns: Iterable[ExpressionVirtualColumn]
 
 }
 
@@ -82,6 +101,7 @@ object DruidNativeQuery {
         case x: SearchQuery     => x.asJsonObject
       }).add("queryType", query.queryType.asJson)
         .add("dataSource", query.dataSource.asJson)
+        .add("virtualColumns", Json.fromValues(query.virtualColumns.map(_.asJson)))
         .asJson
 
   }
@@ -138,6 +158,7 @@ case class GroupByQuery(
     having: Option[Having] = None,
     limitSpec: Option[LimitSpec] = None,
     postAggregations: Iterable[PostAggregation] = Iterable.empty,
+    virtualColumns: Iterable[ExpressionVirtualColumn] = Iterable.empty,
     context: Map[QueryContextParam, QueryContextValue] = Map.empty
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidNativeQuery
@@ -187,6 +208,7 @@ case class TimeSeriesQuery(
     granularity: Granularity = GranularityType.Week,
     descending: String = "true",
     postAggregations: Iterable[PostAggregation] = Iterable.empty,
+    virtualColumns: Iterable[ExpressionVirtualColumn] = Iterable.empty,
     context: Map[QueryContextParam, QueryContextValue] = Map.empty
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidNativeQuery
@@ -204,6 +226,7 @@ case class TopNQuery(
     granularity: Granularity = GranularityType.All,
     filter: Option[Filter] = None,
     postAggregations: Iterable[PostAggregation] = Iterable.empty,
+    virtualColumns: Iterable[ExpressionVirtualColumn] = Iterable.empty,
     context: Map[QueryContextParam, QueryContextValue] = Map.empty
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidNativeQuery
@@ -222,6 +245,7 @@ case class ScanQuery private (
     limit: Option[Int],
     order: Option[Order],
     legacy: Option[Boolean],
+    virtualColumns: Iterable[ExpressionVirtualColumn],
     context: Map[QueryContextParam, QueryContextValue]
 )(implicit val config: DruidConfig)
     extends DruidNativeQuery
@@ -242,6 +266,7 @@ object ScanQuery {
       batchSize: Option[Int] = None,
       limit: Option[Int] = None,
       order: Order = OrderType.None,
+      virtualColumns: Iterable[ExpressionVirtualColumn] = Iterable.empty,
       context: Map[QueryContextParam, QueryContextValue] = Map.empty
   )(implicit config: DruidConfig = DruidConfig.DefaultConfig): ScanQuery = {
 
@@ -266,6 +291,7 @@ object ScanQuery {
                   limit,
                   Option(order),
                   Option(config.scanQueryLegacyMode),
+                  virtualColumns,
                   context)
   }
 }
@@ -278,6 +304,7 @@ case class SearchQuery(
     limit: Option[Int] = None,
     searchDimensions: Iterable[String] = Iterable.empty,
     sort: Option[DimensionOrder] = None,
+    virtualColumns: Iterable[ExpressionVirtualColumn] = Iterable.empty,
     context: Map[QueryContextParam, QueryContextValue] = Map.empty
 )(implicit val config: DruidConfig = DruidConfig.DefaultConfig)
     extends DruidNativeQuery {

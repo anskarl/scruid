@@ -17,7 +17,8 @@
 
 package ing.wbaa.druid.dql.expressions.functions
 
-import ing.wbaa.druid.dql.expressions.{ Expression, LeftExpression, RightExpression }
+import ing.wbaa.druid.dql.Dim
+import ing.wbaa.druid.dql.expressions.{ Expression, LeftExpression, Named, RightExpression }
 
 trait ArrayFunctions {
 
@@ -66,6 +67,8 @@ trait ArrayFunctions {
   def stringToArray(str1: LeftExpression, str2: String): LeftExpression =
     Expression.function("string_to_array", str1.build(), s"'$str2'")
 
+  def stringToArray(dim: Named[Dim], str2: String): LeftExpression =
+    Expression.function("string_to_array", dim.getName, s"'$str2'")
 }
 
 object ArrayFunctions extends ArrayFunctions

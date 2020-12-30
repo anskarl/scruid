@@ -115,7 +115,8 @@ object DSL
     def expr(args: Any*): Expression = BaseExpression(sc.s(args: _*))
   }
 
-  def lit[T](n: T): LeftExpression = new LeftExpression(n.toString)
+  def lit[T: Numeric](n: T): LeftExpression = new LeftExpression(n.toString)
+  def lit(v: String): LeftExpression        = new LeftExpression(s"'$v'")
 
   sealed trait JoinExpressionPart
   case class JoinLeftExpressionPart() extends JoinExpressionPart {

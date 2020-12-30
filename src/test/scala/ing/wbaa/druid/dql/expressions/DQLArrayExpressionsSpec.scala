@@ -18,16 +18,16 @@
 package ing.wbaa.druid.dql.expressions
 // scalastyle:off
 import akka.stream.ActorMaterializer
-import ing.wbaa.druid.{DruidConfig, ScanQuery}
+import ing.wbaa.druid.{ DruidConfig, ScanQuery }
 import ing.wbaa.druid.client.DruidHttpClient
-import ing.wbaa.druid.definitions.{GranularityType, Table}
+import ing.wbaa.druid.definitions.{ GranularityType, Table }
 import ing.wbaa.druid.dql.DSL._
 import ing.wbaa.druid.dql.LanguageCodeData.LanguageCodeRow
 import ing.wbaa.druid.dql.expressions.ExpressionFunctions._
-import ing.wbaa.druid.dql.{CountryCodeData, LanguageCodeData, ScanQueryBuilder}
+import ing.wbaa.druid.dql.{ CountryCodeData, LanguageCodeData, ScanQueryBuilder }
 import io.circe.Json
 import io.circe.generic.auto._
-import org.scalatest.{Ignore, Inspectors}
+import org.scalatest.{ Ignore, Inspectors }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -35,7 +35,6 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-@Ignore
 class DQLArrayExpressionsSpec extends AnyWordSpec with Matchers with ScalaFutures with Inspectors {
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(1 minute, 100 millis)
@@ -99,15 +98,14 @@ class DQLArrayExpressionsSpec extends AnyWordSpec with Matchers with ScalaFuture
 
     "function `stringToArray`" in {
       val query = baseScan
-        .from(
-          LanguageCodeData.datasource
-            .join(
-              right = LanguageCodeData.datasource,
-              prefix = "right_",
-              (l, r) =>
-                arrayContains(stringToArray(l("csv_iso2_countries"), ","), r("arr_iso2_countries"))
-            )
-        )
+        .from(LanguageCodeData.datasourceSmall)
+        .virtualColumn("virtual_column_test",
+                       expression = "string_to_array(csv_iso2_countries, ',')")
+        .virtualColumn("virtual_column_test2",
+                       expression = stringToArray(d"csv_iso2_countries", ","))
+        .virtualColumn("virtual_column_test3", expression = "string_to_array('foo,bar', ',')")
+        .virtualColumn("virtual_column_test4", expression = stringToArray(lit("foo,bar"), ","))
+        .columns("virtual_column_test", "virtual_column_test2", "virtual_column_test3")
         .build()
 
       println("=" * 80)

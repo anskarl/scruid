@@ -51,6 +51,9 @@ object LanguageCodeData {
   final val datasource: Inline =
     Inline(Seq("iso2_lang", "csv_iso2_countries", "arr_iso2_countries"), data)
 
+  final val datasourceSmall: Inline =
+    Inline(Seq("iso2_lang", "csv_iso2_countries", "arr_iso2_countries"), data.take(2))
+
   case class LanguageCodeRow(iso2_lang: String,
                              csv_iso2_countries: String,
                              arr_iso2_countries: Seq[String])

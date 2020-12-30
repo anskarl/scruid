@@ -42,6 +42,41 @@ private[dql] sealed trait QueryBuilderCommons {
 
   protected var postAggregationExpr: List[PostAggregationExpression] = Nil
 
+  protected var virtualColumns: List[ExpressionVirtualColumn] = Nil
+
+  def virtualColumn(name: String, expression: String, outputType: String): this.type = {
+    val uppercase = outputType.toUpperCase
+    require(Dim.ValidTypes.contains(uppercase))
+
+    virtualColumns ::= ExpressionVirtualColumn(name, expression, Some(uppercase))
+    this
+  }
+
+  def virtualColumn(name: String, expression: String): this.type = {
+    virtualColumns ::= ExpressionVirtualColumn(name, expression, None)
+    this
+  }
+
+  def virtualColumn(name: String, expression: Expression, outputType: Dim.DimType): this.type = {
+    virtualColumns ::= ExpressionVirtualColumn(name, expression.build(), Some(outputType.toString))
+    this
+  }
+
+  def virtualColumn(name: String, expression: Expression): this.type = {
+    virtualColumns ::= ExpressionVirtualColumn(name, expression.build(), None)
+    this
+  }
+
+  def virtualColumns(vcs: Iterable[ExpressionVirtualColumn]): this.type = {
+    virtualColumns = vcs.foldRight(virtualColumns)((vc, acc) => vc :: acc)
+    this
+  }
+
+  def virtualColumns(vcs: ExpressionVirtualColumn*): this.type = {
+    virtualColumns = vcs.foldRight(virtualColumns)((vc, acc) => vc :: acc)
+    this
+  }
+
   def withQueryContext(params: Map[QueryContextParam, QueryContextValue]): this.type = {
     queryContextParams = params
     this
@@ -115,6 +150,7 @@ private[dql] sealed trait QueryBuilderCommons {
     other.intervals = intervals
     other.filters = filters
     other.postAggregationExpr = postAggregationExpr
+    other.virtualColumns = virtualColumns
     other
   }
 
@@ -237,7 +273,8 @@ final class TimeseriesQueryBuilder private[dql] ()
       granularity = this.granularityOpt.getOrElse(GranularityType.Week),
       descending = this.descending.toString,
       postAggregations = this.getPostAggs,
-      context = this.queryContextParams
+      context = this.queryContextParams,
+      virtualColumns = this.virtualColumns
     )(conf)
   }
 }
@@ -274,7 +311,8 @@ final class TopNQueryBuilder private[dql] (dimension: Dim, metric: String, n: In
       granularity = this.granularityOpt.getOrElse(GranularityType.All),
       filter = this.getFilters,
       postAggregations = this.getPostAggs,
-      context = this.queryContextParams
+      context = this.queryContextParams,
+      virtualColumns = this.virtualColumns
     )(conf)
   }
 
@@ -382,7 +420,8 @@ final class GroupByQueryBuilder private[dql] (dimensions: Iterable[Dim])
       having = havingOpt,
       limitSpec = limitSpecOpt,
       postAggregations = this.getPostAggs,
-      context = this.queryContextParams
+      context = this.queryContextParams,
+      virtualColumns = this.virtualColumns
     )(conf)
   }
 }
@@ -429,7 +468,8 @@ final class ScanQueryBuilder private[dql] () extends QueryBuilderCommons {
       batchSize = this.batchSizeOpt,
       limit = this.limitOpt,
       order = this.order,
-      context = this.queryContextParams
+      context = this.queryContextParams,
+      virtualColumns = this.virtualColumns
     )(conf)
   }
 }
@@ -473,7 +513,8 @@ final class SearchQueryBuilder private[dql] (query: SearchQuerySpec) extends Que
       limit = this.limitOpt,
       searchDimensions = this.dims,
       sort = this.sortOpt.map(DimensionOrder),
-      context = this.queryContextParams
+      context = this.queryContextParams,
+      virtualColumns = this.virtualColumns
     )(conf)
   }
 }
