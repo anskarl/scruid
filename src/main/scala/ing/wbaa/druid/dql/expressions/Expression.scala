@@ -19,6 +19,7 @@ package ing.wbaa.druid.dql.expressions
 
 import ca.mrvisser.sealerate
 import ing.wbaa.druid._
+import ing.wbaa.druid.dql.Dim
 import ing.wbaa.druid.dql.expressions.functions.{
   ApplyFunctions,
   ArrayFunctions,
@@ -102,21 +103,98 @@ object Expression {
                              op: BinaryExpressionOps.Value): Expression =
     BaseExpression(s"${left.build()}${op}${right.build()}")
 
+  @deprecated(message = "will be removed", since = "now")
   def function(name: String, arg: String): LeftExpression =
     new LeftExpression(s"${name}(${arg})")
 
+  @deprecated(message = "will be removed", since = "now")
   def function(name: String, args: Any*): LeftExpression =
     new LeftExpression(s"${name}(${args.map(_.toString).mkString(",")})")
 
+  @deprecated(message = "will be removed", since = "now")
   def function(name: String, args: Iterable[String]): LeftExpression =
     new LeftExpression(s"${name}(${args.mkString(",")})")
 
-//  def apply(v: String): LeftExpression        = new LeftExpression(v)
-//  def apply[T: Numeric](v: T): LeftExpression = new LeftExpression(v.toString)
-//
-//  def apply[T <: CharSequence](values: Iterable[T]): LeftExpression =
-//    new LeftExpression(values.mkString("[", ",", "]"))
-//  def apply[T: Numeric](values: Iterable[T]): LeftExpression = this.apply(values.map(_.toString))
+  def fun(name: String): LeftExpression =
+    new LeftExpression(s"${name}()")
+
+  def fun[T: ExpressionLiteral](name: String, arg: T): LeftExpression = {
+    val value = implicitly[ExpressionLiteral[T]].literal(arg)
+    new LeftExpression(s"${name}(${value})")
+  }
+
+  def fun[T1: ExpressionLiteral, T2: ExpressionLiteral](name: String,
+                                                        arg1: T1,
+                                                        arg2: T2): LeftExpression = {
+    val value1 = implicitly[ExpressionLiteral[T1]].literal(arg1)
+    val value2 = implicitly[ExpressionLiteral[T2]].literal(arg2)
+    new LeftExpression(s"${name}(${value1},${value2})")
+  }
+
+  def fun[T1: ExpressionLiteral, T2: ExpressionLiteral, T3: ExpressionLiteral](
+      name: String,
+      arg1: T1,
+      arg2: T2,
+      arg3: T3
+  ): LeftExpression = {
+    val value1 = implicitly[ExpressionLiteral[T1]].literal(arg1)
+    val value2 = implicitly[ExpressionLiteral[T2]].literal(arg2)
+    val value3 = implicitly[ExpressionLiteral[T3]].literal(arg3)
+    new LeftExpression(s"${name}(${value1},${value2},${value3})")
+  }
+
+  def fun[T1: ExpressionLiteral,
+          T2: ExpressionLiteral,
+          T3: ExpressionLiteral,
+          T4: ExpressionLiteral](
+      name: String,
+      arg1: T1,
+      arg2: T2,
+      arg3: T3,
+      arg4: T4
+  ): LeftExpression = {
+    val value1 = implicitly[ExpressionLiteral[T1]].literal(arg1)
+    val value2 = implicitly[ExpressionLiteral[T2]].literal(arg2)
+    val value3 = implicitly[ExpressionLiteral[T3]].literal(arg3)
+    val value4 = implicitly[ExpressionLiteral[T4]].literal(arg4)
+    new LeftExpression(s"${name}(${value1},${value2},${value3},${value4})")
+  }
+
+  def fun[T1: ExpressionLiteral,
+          T2: ExpressionLiteral,
+          T3: ExpressionLiteral,
+          T4: ExpressionLiteral,
+          T5: ExpressionLiteral](
+      name: String,
+      arg1: T1,
+      arg2: T2,
+      arg3: T3,
+      arg4: T4,
+      arg5: T5
+  ): LeftExpression = {
+    val value1 = implicitly[ExpressionLiteral[T1]].literal(arg1)
+    val value2 = implicitly[ExpressionLiteral[T2]].literal(arg2)
+    val value3 = implicitly[ExpressionLiteral[T3]].literal(arg3)
+    val value4 = implicitly[ExpressionLiteral[T4]].literal(arg4)
+    val value5 = implicitly[ExpressionLiteral[T5]].literal(arg5)
+    new LeftExpression(s"${name}(${value1},${value2},${value3},${value4},${value5})")
+  }
+
+  def funs[T: ExpressionLiteral](name: String, expressions: Iterable[T]): LeftExpression = {
+    val value = expressions
+      .map(implicitly[ExpressionLiteral[T]].literal)
+      .mkString(s"${name}(", ",", ")")
+    new LeftExpression(value)
+  }
+
+  def funs[T: ExpressionLiteral](name: String,
+                                 arg: String,
+                                 expressions: Iterable[T]): LeftExpression = {
+    val value = expressions
+      .map(implicitly[ExpressionLiteral[T]].literal)
+      .mkString(s"${name}(${arg},", ",", ")")
+    new LeftExpression(value)
+  }
 
 }
 
@@ -175,6 +253,55 @@ class LeftExpression(value: String) extends Expression {
 
 class RightExpression(value: String) extends Expression {
   override def build(): String = this.value
+}
+
+sealed trait ExpressionLiteral[T] {
+  def literal(v: T): String
+}
+
+object ExpressionLiteral {
+
+  def valueOf[T](v: T)(implicit exprLit: ExpressionLiteral[T]): String = exprLit.literal(v)
+
+  sealed trait ExpressionLiteralQuoted[T] extends ExpressionLiteral[T] {
+    override def literal(v: T): String = s"'${v.toString}'"
+  }
+
+  sealed trait ExpressionLiteralUnquoted[T] extends ExpressionLiteral[T] {
+    override def literal(v: T): String = s"$v"
+  }
+
+  sealed trait ExpressionLiteralImpl[T <: Expression] extends ExpressionLiteral[T] {
+    override def literal(v: T): String = s"${v.build()}"
+  }
+
+  implicit object LeftExpressionLiteral  extends ExpressionLiteralImpl[LeftExpression]
+  implicit object RightExpressionLiteral extends ExpressionLiteralImpl[RightExpression]
+  implicit object BaseExpressionLiteral  extends ExpressionLiteralImpl[BaseExpression]
+  implicit object TExpressionLiteral     extends ExpressionLiteralImpl[Expression]
+
+  implicit object DimExpressionLiteral extends ExpressionLiteral[Dim] {
+    override def literal(v: Dim): String = s"${v.getName}"
+  }
+
+  implicit object StringExpressionLiteral extends ExpressionLiteralQuoted[String]
+
+  implicit object ByteExpressionLiteral   extends ExpressionLiteralUnquoted[Byte]
+  implicit object ShortExpressionLiteral  extends ExpressionLiteralUnquoted[Short]
+  implicit object IntExpressionLiteral    extends ExpressionLiteralUnquoted[Int]
+  implicit object LongExpressionLiteral   extends ExpressionLiteralUnquoted[Long]
+  implicit object FloatExpressionLiteral  extends ExpressionLiteralUnquoted[Float]
+  implicit object DoubleExpressionLiteral extends ExpressionLiteralUnquoted[Double]
+
+  implicit object BooleanExpressionLiteral extends ExpressionLiteral[Boolean] {
+    override def literal(v: Boolean): String = s"${v.toString.toLowerCase}"
+  }
+
+  implicit def seqExpressionLiteral[T: ExpressionLiteral]: ExpressionLiteral[Iterable[T]] =
+    new ExpressionLiteral[Iterable[T]] {
+      override def literal(v: Iterable[T]): String =
+        v.map(implicitly[ExpressionLiteral[T]].literal).mkString("[", ",", "]")
+    }
 }
 
 trait ExpressionFunctions

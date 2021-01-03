@@ -64,6 +64,7 @@ class QueryContextSpec extends AnyWordSpec with Matchers with ScalaFutures {
           |"granularity":"hour",
           |"descending":"true",
           |"postAggregations":[],
+          |"virtualColumns":[],
           |"context":{"queryId":"some_custom_id","priority":"100","useCache":"false","skipEmptyBuckets":"true"}
           |}""".toOneLine
 

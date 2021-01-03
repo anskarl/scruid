@@ -17,18 +17,18 @@
 
 package ing.wbaa.druid.dql.expressions.functions
 
-import ing.wbaa.druid.dql.expressions.{ Expression, LeftExpression }
+import ing.wbaa.druid.dql.expressions.{ Expression, ExpressionLiteral, LeftExpression }
 
 trait IPAddressFunctions {
 
-  def ipv4Match(address: LeftExpression, subnet: LeftExpression): LeftExpression =
-    Expression.function("ipv4_match", address.build(), subnet.build())
+  def ipv4Match[T: ExpressionLiteral](address: T, subnet: LeftExpression): LeftExpression =
+    Expression.fun("ipv4_match", address, subnet.build())
 
-  def ipv4Parse(address: LeftExpression): LeftExpression =
-    Expression.function("ipv4_parse", address.build())
+  def ipv4Parse[T: ExpressionLiteral](address: T): LeftExpression =
+    Expression.fun("ipv4_parse", address)
 
-  def ipv4Stringify(address: LeftExpression): LeftExpression =
-    Expression.function("ipv4_stringify", address.build())
+  def ipv4Stringify[T: ExpressionLiteral](address: T): LeftExpression =
+    Expression.fun("ipv4_stringify", address)
 
 }
 

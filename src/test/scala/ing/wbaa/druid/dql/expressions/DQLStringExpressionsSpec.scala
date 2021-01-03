@@ -58,7 +58,7 @@ class DQLStringExpressionsSpec extends AnyWordSpec with Matchers with ScalaFutur
       .batchSize(10)
       .limit(numberOfResults)
 
-  "DQL join query with expressions" should {
+  "DQL join query with string function expressions" should {
     "lowercase and uppercase over countryIsoCode" in {
       val query = baseScan
         .from(
@@ -86,6 +86,16 @@ class DQLStringExpressionsSpec extends AnyWordSpec with Matchers with ScalaFutur
       }
     }
 
+  }
+
+  "DQL query with string function expressions" should {
+    "concat two columns" in {
+      val query = baseScan
+        .from("wikipedia")
+        .where(d"cityName".isNotNull and d"countryIsoCode".isNotNull)
+        .virtualColumn("concat_country_city", concat(d"cityName", d"countryIsoCode"))
+        .build()
+    }
   }
 
 }

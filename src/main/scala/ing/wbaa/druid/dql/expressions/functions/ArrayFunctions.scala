@@ -17,58 +17,58 @@
 
 package ing.wbaa.druid.dql.expressions.functions
 
-import ing.wbaa.druid.dql.Dim
-import ing.wbaa.druid.dql.expressions.{ Expression, LeftExpression, Named, RightExpression }
+import ing.wbaa.druid.dql.expressions.{ Expression, ExpressionLiteral, LeftExpression }
 
 trait ArrayFunctions {
 
-  def array(expr: LeftExpression*): LeftExpression =
-    Expression.function("array", expr.map(_.build()))
+  def array[T: ExpressionLiteral](expr: T): LeftExpression =
+    Expression.fun("array", expr)
 
-  def arrayLength(arr: LeftExpression): LeftExpression =
-    Expression.function("array_length", arr.build())
+  def arrayLength[T: ExpressionLiteral](arr: T): LeftExpression =
+    Expression.fun("array_length", arr)
 
-  def arrayOffset(arr: LeftExpression, index: Long): LeftExpression =
-    Expression.function("array_offset", arr.build(), index)
+  def arrayOffset[T: ExpressionLiteral](arr: T, index: Long): LeftExpression =
+    Expression.fun("array_offset", arr, index)
 
-  def arrayOrdinal(arr: LeftExpression, index: Long): LeftExpression =
-    Expression.function("array_ordinal", arr.build(), index)
+  def arrayOrdinal[T: ExpressionLiteral](arr: T, index: Long): LeftExpression =
+    Expression.fun("array_ordinal", arr, index)
 
-  def arrayContains(arr: LeftExpression, expr: LeftExpression): LeftExpression =
-    Expression.function("array_contains", arr.build(), expr.build())
+  def arrayContains[T1: ExpressionLiteral, T2: ExpressionLiteral](arr: T1,
+                                                                  expr: T2): LeftExpression =
+    Expression.fun("array_contains", arr, expr)
 
-  def arrayContains(arr: LeftExpression, expr: RightExpression): LeftExpression =
-    Expression.function("array_contains", arr.build(), expr.build())
+  def arrayOverlap[T1: ExpressionLiteral, T2: ExpressionLiteral](arr1: T1,
+                                                                 arr2: T2): LeftExpression =
+    Expression.fun("array_overlap", arr1, arr2)
 
-  def arrayOverlap(arr1: LeftExpression, arr2: LeftExpression): LeftExpression =
-    Expression.function("array_overlap", arr1.build(), arr2.build())
+  def arrayOffsetOf[T1: ExpressionLiteral, T2: ExpressionLiteral](arr: T1,
+                                                                  expr: T2): LeftExpression =
+    Expression.fun("array_offset_of", arr, expr)
 
-  def arrayOffsetOf(arr: LeftExpression, expr: LeftExpression): LeftExpression =
-    Expression.function("array_offset_of", arr.build(), expr.build())
+  def arrayOrdinalOf[T1: ExpressionLiteral, T2: ExpressionLiteral](arr: T1,
+                                                                   expr: T2): LeftExpression =
+    Expression.fun("array_ordinal_of", arr, expr)
 
-  def arrayOrdinalOf(arr: LeftExpression, expr: LeftExpression): LeftExpression =
-    Expression.function("array_ordinal_of", arr.build(), expr.build())
+  def arrayPrepend[T1: ExpressionLiteral, T2: ExpressionLiteral](expr: T1,
+                                                                 arr: T2): LeftExpression =
+    Expression.fun("array_prepend", expr, arr)
 
-  def arrayPrepend(expr: LeftExpression, arr: LeftExpression): LeftExpression =
-    Expression.function("array_prepend", expr.build(), arr.build())
+  def arrayAppend[T1: ExpressionLiteral, T2: ExpressionLiteral](arr: T1, expr: T2): LeftExpression =
+    Expression.fun("array_append", arr, expr)
 
-  def arrayAppend(arr: LeftExpression, expr: LeftExpression): LeftExpression =
-    Expression.function("array_append", arr.build(), expr.build())
+  def arrayConcat[T1: ExpressionLiteral, T2: ExpressionLiteral](arr1: T1,
+                                                                arr2: T2): LeftExpression =
+    Expression.fun("array_concat", arr1, arr2)
 
-  def arrayConcat(arr1: LeftExpression, arr2: LeftExpression): LeftExpression =
-    Expression.function("array_concat", arr1.build(), arr2.build())
+  def arraySlice[T: ExpressionLiteral](arr1: T, start: Long, end: Long): LeftExpression =
+    Expression.fun("array_slice", arr1, start, end)
 
-  def arraySlice(arr1: LeftExpression, start: Long, end: Long): LeftExpression =
-    Expression.function("array_slice", arr1.build(), start, end)
+  def arrayToString[T: ExpressionLiteral](arr: T, str: String): LeftExpression =
+    Expression.fun("array_to_string", arr, str)
 
-  def arrayToString(arr: LeftExpression, str: String): LeftExpression =
-    Expression.function("array_to_string", arr.build(), s"'$str'")
+  def stringToArray[T: ExpressionLiteral](str1: T, str2: String): LeftExpression =
+    Expression.fun("string_to_array", str1, str2)
 
-  def stringToArray(str1: LeftExpression, str2: String): LeftExpression =
-    Expression.function("string_to_array", str1.build(), s"'$str2'")
-
-  def stringToArray(dim: Named[Dim], str2: String): LeftExpression =
-    Expression.function("string_to_array", dim.getName, s"'$str2'")
 }
 
 object ArrayFunctions extends ArrayFunctions

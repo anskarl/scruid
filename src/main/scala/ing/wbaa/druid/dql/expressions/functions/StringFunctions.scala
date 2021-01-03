@@ -17,103 +17,108 @@
 
 package ing.wbaa.druid.dql.expressions.functions
 
-import ing.wbaa.druid.dql.expressions.{ Expression, LeftExpression }
+import ing.wbaa.druid.dql.expressions.{ Expression, ExpressionLiteral, LeftExpression }
 
 // scalastyle:off number.of.methods
 trait StringFunctions {
+  import ing.wbaa.druid.dql.expressions.ExpressionLiteral._
 
-  def concat(args: LeftExpression*): LeftExpression =
-    Expression.function("concat", args.map(_.build()))
+  def concat[T: ExpressionLiteral](args: T*): LeftExpression =
+    Expression.funs("concat", args)
 
-  def format(pattern: String, args: LeftExpression*): LeftExpression =
-    Expression.function("format", args.scanLeft(pattern)((_, e) => e.build()))
+  def format[T: ExpressionLiteral](pattern: String, args: T*): LeftExpression =
+    Expression.funs("format", pattern, args)
 
-  def like(expr: LeftExpression, pattern: String): LeftExpression =
-    new LeftExpression(s"${expr.build()} LIKE ${pattern}")
+  def like[T: ExpressionLiteral](expr: T, pattern: String): LeftExpression = {
+    val value = implicitly[ExpressionLiteral[T]].literal(expr)
+    new LeftExpression(s"${value} LIKE ${pattern}")
+  }
 
-  def like(expr: LeftExpression, pattern: String, escape: String): LeftExpression =
-    new LeftExpression(s"${expr.build()} LIKE ${pattern} ${escape}")
+  def like[T: ExpressionLiteral](expr: T, pattern: String, escape: String): LeftExpression = {
+    val value = implicitly[ExpressionLiteral[T]].literal(expr)
+    new LeftExpression(s"${value} LIKE ${pattern} ${escape}")
+  }
 
-  def lookup(expr: LeftExpression, lookupName: String): LeftExpression =
-    Expression.function("lookup", expr.build(), lookupName)
+  def lookup[T: ExpressionLiteral](expr: T, lookupName: String): LeftExpression =
+    Expression.fun("lookup", expr, lookupName)
 
-  def parseLong(value: String): LeftExpression =
-    Expression.function("parse_long", value)
+  def parseLong[T: ExpressionLiteral](expr: T): LeftExpression =
+    Expression.fun("parse_long", expr)
 
-  def parseLong(value: String, radix: Int): LeftExpression =
-    Expression.function("parse_long", value, radix)
+  def parseLong[T: ExpressionLiteral](expr: T, radix: Int): LeftExpression =
+    Expression.fun("parse_long", expr, radix)
 
-  def regexpExtract(expr: LeftExpression, pattern: String): LeftExpression =
-    Expression.function("timestamp_ceil", expr.build(), pattern)
+  def regexpExtract[T: ExpressionLiteral](expr: T, pattern: String): LeftExpression =
+    Expression.fun("timestamp_ceil", expr, pattern)
 
-  def regexpExtract(expr: LeftExpression, pattern: String, index: Int): LeftExpression =
-    Expression.function("regexp_extract", expr.build(), pattern, index)
+  def regexpExtract[T: ExpressionLiteral](expr: T, pattern: String, index: Int): LeftExpression =
+    Expression.fun("regexp_extract", expr, pattern, index)
 
-  def regexpLike(expr: LeftExpression, pattern: String): LeftExpression =
-    Expression.function("regexp_like", expr.build(), pattern)
+  def regexpLike[T: ExpressionLiteral](expr: T, pattern: String): LeftExpression =
+    Expression.fun("regexp_extract", expr, pattern)
 
-  def containsString(expr: LeftExpression, pattern: String): LeftExpression =
-    Expression.function("contains_string", expr.build(), pattern)
+  def containsString[T: ExpressionLiteral](expr: T, pattern: String): LeftExpression =
+    Expression.fun("contains_string", expr, pattern)
 
-  def icontainsString(expr: LeftExpression, pattern: String): LeftExpression =
-    Expression.function("icontains_string", expr.build(), pattern)
+  def icontainsString[T: ExpressionLiteral](expr: T, pattern: String): LeftExpression =
+    Expression.fun("icontains_string", expr, pattern)
 
-  def replace(expr: LeftExpression, pattern: String, replacement: String): LeftExpression =
-    Expression.function("replace", expr.build(), pattern, replacement)
+  def replace[T: ExpressionLiteral](expr: T, pattern: String, replacement: String): LeftExpression =
+    Expression.fun("replace", expr, pattern, replacement)
 
-  def substring(expr: LeftExpression, index: Int, length: Int): LeftExpression =
-    Expression.function("substring", expr.build(), index, length)
+  def substring[T: ExpressionLiteral](expr: T, index: Int, length: Int): LeftExpression =
+    Expression.fun("substring", expr, index, length)
 
-  def right(expr: LeftExpression, length: Int): LeftExpression =
-    Expression.function("right", expr.build(), length)
+  def right[T: ExpressionLiteral](expr: T, length: Int): LeftExpression =
+    Expression.fun("right", expr, length)
 
-  def left(expr: LeftExpression, length: Int): LeftExpression =
-    Expression.function("left", expr.build(), length)
+  def left[T: ExpressionLiteral](expr: T, length: Int): LeftExpression =
+    Expression.fun("left", expr, length)
 
-  def strlen(expr: LeftExpression): LeftExpression =
-    Expression.function("left", expr.build())
+  def strlen[T: ExpressionLiteral](expr: T): LeftExpression =
+    Expression.fun("left", expr)
 
-  def strpos(haystack: LeftExpression, needle: String): LeftExpression =
-    Expression.function("strpos", haystack.build(), needle)
+  def strpos[T: ExpressionLiteral](haystack: T, needle: String): LeftExpression =
+    Expression.fun("strpos", haystack, needle)
 
-  def strpos(haystack: LeftExpression, needle: String, fromIndex: Int): LeftExpression =
-    Expression.function("strpos", haystack.build(), needle, fromIndex)
+  def strpos[T: ExpressionLiteral](haystack: T, needle: String, fromIndex: Int): LeftExpression =
+    Expression.fun("strpos", haystack, needle, fromIndex)
 
-  def trim(expr: LeftExpression): LeftExpression =
-    Expression.function("trim", expr.build())
+  def trim[T: ExpressionLiteral](expr: T): LeftExpression =
+    Expression.fun("trim", expr)
 
-  def trim(expr: LeftExpression, chars: String = " "): LeftExpression =
-    Expression.function("trim", expr.build(), chars)
+  def trim[T: ExpressionLiteral](expr: T, chars: String = " "): LeftExpression =
+    Expression.fun("trim", expr, chars)
 
-  def ltrim(expr: LeftExpression): LeftExpression =
-    Expression.function("ltrim", expr.build())
+  def ltrim[T: ExpressionLiteral](expr: T): LeftExpression =
+    Expression.fun("ltrim", expr)
 
-  def ltrim(expr: LeftExpression, chars: String = " "): LeftExpression =
-    Expression.function("ltrim", expr.build(), chars)
+  def ltrim[T: ExpressionLiteral](expr: T, chars: String = " "): LeftExpression =
+    Expression.fun("ltrim", expr, chars)
 
-  def rtrim(expr: LeftExpression): LeftExpression =
-    Expression.function("rtrim", expr.build())
+  def rtrim[T: ExpressionLiteral](expr: T): LeftExpression =
+    Expression.fun("rtrim", expr)
 
-  def rtrim(expr: LeftExpression, chars: String = " "): LeftExpression =
-    Expression.function("rtrim", expr.build(), chars)
+  def rtrim[T: ExpressionLiteral](expr: T, chars: String = " "): LeftExpression =
+    Expression.fun("rtrim", expr, chars)
 
-  def lower(expr: LeftExpression): LeftExpression =
-    Expression.function("lower", expr.build())
+  def lower[T: ExpressionLiteral](expr: T): LeftExpression =
+    Expression.fun("lower", expr)
 
-  def upper(expr: LeftExpression): LeftExpression =
-    Expression.function("upper", expr.build())
+  def upper[T: ExpressionLiteral](expr: T): LeftExpression =
+    Expression.fun("upper", expr)
 
-  def reverse(expr: LeftExpression): LeftExpression =
-    Expression.function("reverse", expr.build())
+  def reverse[T: ExpressionLiteral](expr: T): LeftExpression =
+    Expression.fun("reverse", expr)
 
-  def repeat(expr: LeftExpression, n: Int): LeftExpression =
-    Expression.function("repeat", expr.build(), n)
+  def repeat[T: ExpressionLiteral](expr: T, n: Int): LeftExpression =
+    Expression.fun("repeat", expr, n)
 
-  def lpad(expr: LeftExpression, length: Int, chars: String): LeftExpression =
-    Expression.function("lpad", expr.build(), length, chars)
+  def lpad[T: ExpressionLiteral](expr: T, length: Int, chars: String): LeftExpression =
+    Expression.fun("lpad", expr, length, chars)
 
-  def rpad(expr: LeftExpression, length: Int, chars: String): LeftExpression =
-    Expression.function("rpad", expr.build(), length, chars)
+  def rpad[T: ExpressionLiteral](expr: T, length: Int, chars: String): LeftExpression =
+    Expression.fun("rpad", expr, length, chars)
 
 }
 // scalastyle:on number.of.methods

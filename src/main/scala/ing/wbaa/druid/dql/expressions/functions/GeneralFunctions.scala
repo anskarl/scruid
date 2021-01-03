@@ -17,7 +17,13 @@
 
 package ing.wbaa.druid.dql.expressions.functions
 
-import ing.wbaa.druid.dql.expressions.{ BaseExpression, CastType, Expression, LeftExpression }
+import ing.wbaa.druid.dql.expressions.{
+  BaseExpression,
+  CastType,
+  Expression,
+  ExpressionLiteral,
+  LeftExpression
+}
 
 object CaseSearched {
 
@@ -102,8 +108,8 @@ object CaseSimple {
 // scalastyle:off todo.comment
 trait GeneralFunctions {
 
-  def cast(expr: LeftExpression, castType: CastType): LeftExpression =
-    new LeftExpression(s"cast(${expr.build()}, '${castType.encode()}')")
+  def cast[T: ExpressionLiteral](expr: T, castType: CastType): LeftExpression =
+    Expression.fun("cast", expr, castType.encode())
 
   def when(predicateExpr: LeftExpression,
            thenExpr: LeftExpression,

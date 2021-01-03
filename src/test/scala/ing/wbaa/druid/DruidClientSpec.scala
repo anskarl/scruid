@@ -149,7 +149,7 @@ class DruidClientSpec extends AnyWordSpec with Matchers with ScalaFutures {
               |"error":"Unknown exception",
               |"errorMessage":"Cannot construct instance of `org.apache.druid.query.spec.LegacySegmentSpec`,
               | problem: Format requires a '/' separator: invalid interval\n
-              | at [Source: (org.eclipse.jetty.server.HttpInputOverHTTP); line: 1, column: 186]
+              | at [Source: (org.eclipse.jetty.server.HttpInputOverHTTP); line: 1, column: 206]
               | (through reference chain: org.apache.druid.query.timeseries.TimeseriesQuery[\"intervals\"])",
               |"errorClass":"com.fasterxml.jackson.databind.exc.ValueInstantiationException",
               |"host":null

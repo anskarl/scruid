@@ -17,72 +17,78 @@
 
 package ing.wbaa.druid.dql.expressions.functions
 
-import ing.wbaa.druid.dql.expressions.{ Expression, LeftExpression }
+import ing.wbaa.druid.dql.expressions.{ Expression, ExpressionLiteral, LeftExpression }
 
 trait TimeFunctions {
 
-  def timestamp(expr: LeftExpression): LeftExpression =
-    Expression.function("timestamp", expr.build())
+  def timestamp[T: ExpressionLiteral](expr: T): LeftExpression =
+    Expression.fun("timestamp", expr)
 
-  def timestamp(expr: LeftExpression, formatString: String): LeftExpression =
-    Expression.function("timestamp", expr.build(), formatString)
+  def timestamp[T: ExpressionLiteral](expr: T, formatString: String): LeftExpression =
+    Expression.fun("timestamp", expr, formatString)
 
-  def unixTimestamp(expr: LeftExpression): LeftExpression =
-    Expression.function("unix_timestamp", expr.build())
+  def unixTimestamp[T: ExpressionLiteral](expr: T): LeftExpression =
+    Expression.fun("unix_timestamp", expr)
 
-  def unixTimestamp(expr: LeftExpression, formatString: String): LeftExpression =
-    Expression.function("unix_timestamp", expr.build(), formatString)
+  def unixTimestamp[T: ExpressionLiteral](expr: T, formatString: String): LeftExpression =
+    Expression.fun("unix_timestamp", expr, formatString)
 
-  def timestampCeil(expr: LeftExpression, period: String): LeftExpression =
-    Expression.function("timestamp_ceil", expr.build(), period)
+  def timestampCeil[T: ExpressionLiteral](expr: T, period: String): LeftExpression =
+    Expression.fun("timestamp_ceil", expr, period)
 
-  def timestampCeil(expr: LeftExpression,
-                    period: String,
-                    timezone: String,
-                    origin: Option[String] = None): LeftExpression =
-    Expression.function("timestamp_ceil", expr.build(), period, origin.getOrElse("null"), timezone)
+  def timestampCeil[T: ExpressionLiteral](expr: T,
+                                          period: String,
+                                          timezone: String,
+                                          origin: Option[String] = None): LeftExpression =
+    Expression.fun("timestamp_ceil", expr, period, origin.getOrElse("null"), timezone)
 
-  def timestampFloor(expr: LeftExpression, period: String): LeftExpression =
-    Expression.function("timestamp_floor", expr.build(), period)
+  def timestampFloor[T: ExpressionLiteral](expr: T, period: String): LeftExpression =
+    Expression.fun("timestamp_floor", expr, period)
 
-  def timestampFloor(expr: LeftExpression,
-                     period: String,
-                     timezone: String,
-                     origin: Option[String] = None): LeftExpression =
-    Expression.function("timestamp_floor", expr.build(), period, origin.getOrElse("null"), timezone)
+  def timestampFloor[T: ExpressionLiteral](expr: T,
+                                           period: String,
+                                           timezone: String,
+                                           origin: Option[String] = None): LeftExpression =
+    Expression.fun("timestamp_floor", expr, period, origin.getOrElse("null"), timezone)
 
-  def timestampShift(expr: LeftExpression, period: String): LeftExpression =
-    Expression.function("timestamp_shift", expr.build(), period)
+  def timestampShift[T: ExpressionLiteral](expr: T, period: String): LeftExpression =
+    Expression.fun("timestamp_shift", expr, period)
 
-  def timestampShift(expr: LeftExpression,
-                     period: String,
-                     timezone: String,
-                     origin: Option[String] = None): LeftExpression =
-    Expression.function("timestamp_shift", expr.build(), period, origin.getOrElse("null"), timezone)
+  def timestampShift[T: ExpressionLiteral](expr: T,
+                                           period: String,
+                                           timezone: String,
+                                           origin: Option[String] = None): LeftExpression =
+    Expression.fun("timestamp_shift", expr, period, origin.getOrElse("null"), timezone)
 
-  def timestampExtract(expr: LeftExpression, unit: String): LeftExpression =
-    Expression.function("timestamp_extract", expr.build(), unit)
+  def timestampExtract[T: ExpressionLiteral](expr: T, unit: String): LeftExpression =
+    Expression.fun("timestamp_extract", expr, unit)
 
-  def timestampExtract(expr: LeftExpression, unit: String, timezone: String): LeftExpression =
-    Expression.function("timestamp_extract", expr.build(), unit, timezone)
+  def timestampExtract[T: ExpressionLiteral](expr: T,
+                                             unit: String,
+                                             timezone: String): LeftExpression =
+    Expression.fun("timestamp_extract", expr, unit, timezone)
 
-  def timestampParse(expr: String): LeftExpression =
-    Expression.function("timestamp_parse", expr)
+  def timestampParse[T: ExpressionLiteral](expr: T): LeftExpression =
+    Expression.fun("timestamp_parse", expr)
 
-  def timestampParse(expr: String, pattern: String): LeftExpression =
-    Expression.function("timestamp_parse", expr, pattern)
+  def timestampParse[T: ExpressionLiteral](expr: T, pattern: String): LeftExpression =
+    Expression.fun("timestamp_parse", expr, pattern)
 
-  def timestampParse(expr: String, pattern: String, timezone: String): LeftExpression =
-    Expression.function("timestamp_parse", expr, pattern, timezone)
+  def timestampParse[T: ExpressionLiteral](expr: T,
+                                           pattern: String,
+                                           timezone: String): LeftExpression =
+    Expression.fun("timestamp_parse", expr, pattern, timezone)
 
-  def timestampFormat(expr: LeftExpression): LeftExpression =
-    Expression.function("timestamp_format", expr.build())
+  def timestampFormat[T: ExpressionLiteral](expr: T): LeftExpression =
+    Expression.fun("timestamp_format", expr)
 
-  def timestampFormat(expr: LeftExpression, pattern: String): LeftExpression =
-    Expression.function("timestamp_format", expr.build(), pattern)
+  def timestampFormat[T: ExpressionLiteral](expr: T, pattern: String): LeftExpression =
+    Expression.fun("timestamp_format", expr, pattern)
 
-  def timestampFormat(expr: LeftExpression, pattern: String, timezone: String): LeftExpression =
-    Expression.function("timestamp_format", expr.build(), pattern, timezone)
+  def timestampFormat[T: ExpressionLiteral](expr: T,
+                                            pattern: String,
+                                            timezone: String): LeftExpression =
+    Expression.fun("timestamp_format", expr, pattern, timezone)
 
 }
 

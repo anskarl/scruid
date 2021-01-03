@@ -17,27 +17,27 @@
 
 package ing.wbaa.druid.dql.expressions.functions
 
-import ing.wbaa.druid.dql.expressions.{ Expression, LeftExpression }
+import ing.wbaa.druid.dql.expressions._
 
 trait ApplyFunctions {
 
-  def map(lambda: String, arr: LeftExpression): LeftExpression =
-    Expression.function("map", lambda, arr.build())
+  def map[T: ExpressionLiteral](lambda: String, arr: T): LeftExpression =
+    Expression.fun("map", lambda, arr)
 
-  def cartesianMap(lambda: String, arr: LeftExpression*): LeftExpression =
-    Expression.function("cartesian_map", lambda, arr.map(_.build()))
+  def cartesianMap[T: ExpressionLiteral](lambda: String, arr: T*): LeftExpression =
+    Expression.funs("cartesian_map", lambda, arr)
 
-  def filter(lambda: String, arr: LeftExpression): LeftExpression =
-    Expression.function("filter", lambda, arr.build())
+  def filter[T: ExpressionLiteral](lambda: String, arr: T): LeftExpression =
+    Expression.fun("filter", lambda, arr)
 
-  def cartesianFold(lambda: String, arr: LeftExpression*): LeftExpression =
-    Expression.function("cartesian_fold", lambda, arr.map(_.build()))
+  def cartesianFold[T: ExpressionLiteral](lambda: String, arr: T*): LeftExpression =
+    Expression.funs("cartesian_fold", lambda, arr)
 
-  def any(lambda: String, arr: LeftExpression): LeftExpression =
-    Expression.function("any", lambda, arr.build())
+  def any[T: ExpressionLiteral](lambda: String, arr: T): LeftExpression =
+    Expression.fun("any", lambda, arr)
 
-  def all(lambda: String, arr: LeftExpression): LeftExpression =
-    Expression.function("all", lambda, arr.build())
+  def all[T: ExpressionLiteral](lambda: String, arr: T): LeftExpression =
+    Expression.fun("all", lambda, arr)
 
 }
 

@@ -17,21 +17,21 @@
 
 package ing.wbaa.druid.dql.expressions.functions
 
-import ing.wbaa.druid.dql.expressions.{ Expression, LeftExpression }
+import ing.wbaa.druid.dql.expressions.{ Expression, ExpressionLiteral, LeftExpression }
 
 trait ReductionFunctions {
 
-  def greatest(expressions: LeftExpression*): LeftExpression =
-    Expression.function("greatest", expressions.map(_.build()))
+  def greatest[T: ExpressionLiteral](expressions: T*): LeftExpression =
+    Expression.funs("greatest", expressions)
 
-  def greatest(expressions: Iterable[LeftExpression]): LeftExpression =
-    Expression.function("greatest", expressions.map(_.build()))
+  def greatest[T: ExpressionLiteral](expressions: Iterable[T]): LeftExpression =
+    Expression.funs("greatest", expressions)
 
-  def least(expressions: LeftExpression*): LeftExpression =
-    Expression.function("least", expressions.map(_.build()))
+  def least[T: ExpressionLiteral](expressions: LeftExpression*): LeftExpression =
+    Expression.funs("least", expressions)
 
-  def least(expressions: Iterable[LeftExpression]): LeftExpression =
-    Expression.function("least", expressions.map(_.build()))
+  def least[T: ExpressionLiteral](expressions: Iterable[LeftExpression]): LeftExpression =
+    Expression.funs("least", expressions)
 }
 
 object ReductionFunctions extends ReductionFunctions

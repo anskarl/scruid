@@ -104,13 +104,18 @@ class DQLArrayExpressionsSpec extends AnyWordSpec with Matchers with ScalaFuture
         .virtualColumn("virtual_column_test2",
                        expression = stringToArray(d"csv_iso2_countries", ","))
         .virtualColumn("virtual_column_test3", expression = "string_to_array('foo,bar', ',')")
-        .virtualColumn("virtual_column_test4", expression = stringToArray(lit("foo,bar"), ","))
-        .columns("virtual_column_test", "virtual_column_test2", "virtual_column_test3")
+        //.virtualColumn("virtual_column_test4", expression = stringToArray(lit("foo,bar"), ","))
+        .virtualColumn("virtual_column_test5", expression = stringToArray("foo,bar", ","))
+        .columns("virtual_column_test",
+                 "virtual_column_test2",
+                 "virtual_column_test3",
+                 //"virtual_column_test4",
+                 "virtual_column_test5")
         .build()
 
-      println("=" * 80)
-      println(query.toDebugString)
-      println("=" * 80)
+//      println("=" * 80)
+//      println(query.toDebugString)
+//      println("=" * 80)
 
       val resultsF = query.execute()
       whenReady(resultsF) { results =>
