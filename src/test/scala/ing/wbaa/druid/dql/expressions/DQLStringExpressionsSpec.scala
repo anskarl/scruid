@@ -93,7 +93,7 @@ class DQLStringExpressionsSpec extends AnyWordSpec with Matchers with ScalaFutur
       val query = baseScan
         .from("wikipedia")
         .where(d"cityName".isNotNull and d"countryIsoCode".isNotNull)
-        .virtualColumn("concat_country_city", concat(d"cityName", d"countryIsoCode"))
+        .virtualColumn("concat_country_city", concat(d"cityName", "_", d"countryIsoCode"))
         .build()
     }
   }

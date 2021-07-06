@@ -30,6 +30,7 @@ import ing.wbaa.druid.dql.expressions.functions.{
   StringFunctions,
   TimeFunctions
 }
+import scala.annotation.implicitNotFound
 
 // scalastyle:off todo.comment
 // scalastyle:off number.of.methods
@@ -255,6 +256,10 @@ class RightExpression(value: String) extends Expression {
   override def build(): String = this.value
 }
 
+@implicitNotFound(
+  msg =
+    "Only implementations of Expression, Dim and primitives (String, Int, Double etc.) are supported"
+)
 sealed trait ExpressionLiteral[T] {
   def literal(v: T): String
 }
@@ -295,6 +300,26 @@ object ExpressionLiteral {
 
   implicit object BooleanExpressionLiteral extends ExpressionLiteral[Boolean] {
     override def literal(v: Boolean): String = s"${v.toString.toLowerCase}"
+  }
+
+  object AnyExpressionLiteral {
+    def literal(value: Any): String = value match {
+      case v: LeftExpression  => LeftExpressionLiteral.literal(v)
+      case v: RightExpression => RightExpressionLiteral.literal(v)
+      case v: BaseExpression  => BaseExpressionLiteral.literal(v)
+      case v: Expression      => TExpressionLiteral.literal(v)
+      case v: Dim             => DimExpressionLiteral.literal(v)
+      case v: String          => StringExpressionLiteral.literal(v)
+      case v: Byte            => ByteExpressionLiteral.literal(v)
+      case v: Short           => ShortExpressionLiteral.literal(v)
+      case v: Int             => IntExpressionLiteral.literal(v)
+      case v: Long            => LongExpressionLiteral.literal(v)
+      case v: Float           => FloatExpressionLiteral.literal(v)
+      case v: Double          => DoubleExpressionLiteral.literal(v)
+      case v: Boolean         => BooleanExpressionLiteral.literal(v)
+      case _ =>
+        throw new UnsupportedOperationException(s"Not implemented for type ${value.getClass}")
+    }
   }
 
   implicit def seqExpressionLiteral[T: ExpressionLiteral]: ExpressionLiteral[Iterable[T]] =

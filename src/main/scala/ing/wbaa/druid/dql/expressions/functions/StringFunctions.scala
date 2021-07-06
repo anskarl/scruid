@@ -18,13 +18,17 @@
 package ing.wbaa.druid.dql.expressions.functions
 
 import ing.wbaa.druid.dql.expressions.{ Expression, ExpressionLiteral, LeftExpression }
+import scala.reflect.ClassTag
 
 // scalastyle:off number.of.methods
 trait StringFunctions {
   import ing.wbaa.druid.dql.expressions.ExpressionLiteral._
 
-  def concat[T: ExpressionLiteral](args: T*): LeftExpression =
-    Expression.funs("concat", args)
+
+  def concat[T](args: T*): LeftExpression =
+    new LeftExpression(
+      args.map(AnyExpressionLiteral.literal(_)).mkString("concat(", ",", ")")
+    )
 
   def format[T: ExpressionLiteral](pattern: String, args: T*): LeftExpression =
     Expression.funs("format", pattern, args)
